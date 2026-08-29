@@ -1,0 +1,13 @@
+{
+  "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "projectname": "miniapp-e2e-test",
+  "appid": "wxd2b60710f7c78648",
+  "compileType": "miniprogram",
+  "libVersion": "3.9.0",
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": true
+  }
+}

@@ -1,0 +1,131 @@
+/* 导航抽屉组件 - 马卡龙毛玻璃风格 */
+
+.drawer-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.drawer-mask.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 540rpx;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 999;
+  transform: translateX(-100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06);
+  border-radius: 0 24px 24px 0;
+}
+
+.drawer.show {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  padding: 20px 40rpx 32rpx;
+  border-bottom: 1rpx solid rgba(186, 230, 253, 0.3);
+  box-sizing: border-box;
+}
+
+.drawer-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #475569;
+  display: block;
+}
+
+.drawer-subtitle {
+  font-size: 24rpx;
+  color: #94a3b8;
+  margin-top: 8rpx;
+  display: block;
+}
+
+.drawer-menu {
+  flex: 1;
+  padding: 16rpx 0;
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 40rpx;
+  transition: all 0.2s ease;
+  position: relative;
+  opacity: 0;
+  transform: translateX(-20rpx);
+}
+
+.drawer.show .drawer-item {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer.show .drawer-item:nth-child(1) { transition-delay: 0.08s; }
+.drawer.show .drawer-item:nth-child(2) { transition-delay: 0.14s; }
+.drawer.show .drawer-item:nth-child(3) { transition-delay: 0.20s; }
+
+.drawer-item.active {
+  background: linear-gradient(90deg, rgba(186, 230, 253, 0.18), transparent);
+}
+
+.drawer-item:active {
+  transform: scale(0.95);
+  background: rgba(186, 230, 253, 0.1);
+}
+
+.drawer-item-icon {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.drawer-item-text {
+  font-size: 30rpx;
+  color: #475569;
+  font-weight: 500;
+}
+
+.drawer-item.active .drawer-item-text {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.drawer-item-arrow {
+  margin-left: auto;
+  color: #0284c7;
+  font-size: 16rpx;
+}
+
+.drawer-footer {
+  padding: 24rpx 40rpx 48rpx;
+  border-top: 1rpx solid rgba(186, 230, 253, 0.3);
+}
+
+.drawer-version {
+  font-size: 22rpx;
+  color: #cbd5e1;
+}

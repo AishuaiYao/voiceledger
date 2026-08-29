@@ -1,0 +1,9 @@
+{
+  "name": "deleteFiles",
+  "version": "1.0.0",
+  "description": "以管理员身份批量删除云存储文件（不受仅创建者可删限制）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

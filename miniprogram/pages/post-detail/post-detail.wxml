@@ -1,0 +1,142 @@
+<view class="page">
+  <view class="bg-gradient"></view>
+
+  <!-- 自定义导航栏 -->
+  <view class="nav-bar" style="padding-top: {{statusBarHeight}}px; height: {{navTotalHeight}}px;">
+    <view class="nav-bar-left" bind:tap="onBack">
+      <text class="back-icon">‹</text>
+    </view>
+    <view class="nav-bar-title">博文详情</view>
+    <view class="nav-bar-right"></view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-section" wx:if="{{loading}}" style="padding-top: {{navTotalHeight + 40}}px;">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 博文内容 -->
+  <scroll-view scroll-y class="content-scroll" wx:if="{{post && !loading}}" style="top: {{navTotalHeight}}px; bottom: 0;">
+    <view class="post-detail">
+      <!-- 作者信息 -->
+      <view class="post-header">
+        <view class="author-info">
+          <image wx:if="{{post.authorAvatarUrl}}" class="author-avatar" src="{{post.authorAvatarUrl}}" mode="aspectFill" binderror="onAvatarError"></image>
+          <view wx:else class="author-avatar author-avatar-default">{{post.authorNickName ? post.authorNickName[0] : '?'}}</view>
+          <view class="author-meta">
+            <text class="author-name">{{post.authorNickName}}</text>
+            <view class="post-source">
+              <text class="post-source-icon">📒</text>
+              <text class="post-source-name">{{post.notebookName}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="post-cat-badge" style="background: {{post.coverColor}};">{{post.mainCategory}}</view>
+      </view>
+
+      <!-- 标题与正文 -->
+      <text class="post-title">{{post.title}}</text>
+      <view class="post-content">
+        <text wx:for="{{post.paragraphs}}" wx:for-item="line" wx:key="*this" class="content-line">{{line}}</text>
+      </view>
+
+      <!-- 配图 -->
+      <view class="post-images" wx:if="{{post.imageUrls && post.imageUrls.length > 0}}">
+        <image
+          wx:for="{{post.imageUrls}}"
+          wx:for-item="img"
+          wx:key="*this"
+          class="post-image"
+          src="{{img}}"
+          mode="aspectFill"
+          bind:tap="onPreviewImage"
+          data-url="{{img}}"
+        ></image>
+      </view>
+
+      <!-- 消费统计 -->
+      <view class="post-stats">
+        <view class="stat-pill">
+          <text class="stat-pill-label">总支出</text>
+          <text class="stat-pill-value">¥{{post.totalExpense}}</text>
+        </view>
+        <view class="stat-pill">
+          <text class="stat-pill-label">记录</text>
+          <text class="stat-pill-value">{{post.recordCount}} 笔</text>
+        </view>
+        <text class="post-time">{{post.createdAt}}</text>
+      </view>
+
+      <!-- 评论区 -->
+      <view class="comment-section">
+        <view class="comment-section-title">评论 {{post.commentCount}}</view>
+
+        <view class="comment-empty" wx:if="{{comments.length === 0 && !loadingComments}}">
+          <text>还没有评论，说点什么吧</text>
+        </view>
+
+        <view class="comment-item" wx:for="{{comments}}" wx:key="_id">
+          <image wx:if="{{item.avatarUrl}}" class="comment-avatar" src="{{item.avatarUrl}}" mode="aspectFill"></image>
+          <view wx:else class="comment-avatar comment-avatar-default">{{item.nickName ? item.nickName[0] : '?'}}</view>
+          <view class="comment-body">
+            <view class="comment-meta">
+              <text class="comment-name">{{item.nickName}}</text>
+              <view class="comment-del" wx:if="{{item.isOwner}}" catch:tap="onDeleteComment" data-id="{{item._id}}">删除</view>
+            </view>
+            <text class="comment-content">{{item.content}}</text>
+            <view class="comment-reply-btn" catch:tap="onReplyTap" data-id="{{item._id}}" data-openid="{{item.openId}}" data-name="{{item.nickName}}">回复</view>
+
+            <!-- 楼中楼回复 -->
+            <view class="reply-list" wx:if="{{item.replies && item.replies.length > 0}}">
+              <view class="reply-item" wx:for="{{item.replies}}" wx:for-item="reply" wx:key="_id">
+                <text class="reply-name">{{reply.nickName}}</text>
+                <text class="reply-to" wx:if="{{reply.replyToName}}"> 回复 {{reply.replyToName}}</text>
+                <text class="reply-content">：{{reply.content}}</text>
+                <view class="comment-del reply-del" wx:if="{{reply.isOwner}}" catch:tap="onDeleteComment" data-id="{{reply._id}}">删除</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view style="height: 160rpx;"></view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作栏 -->
+  <view class="action-bar" wx:if="{{post && !loading}}">
+    <view class="action-bar-item {{post.liked ? 'liked' : ''}}" bind:tap="onLikeTap">
+      <text class="action-icon">{{post.liked ? '❤️' : '🤍'}}</text>
+      <text class="action-count">{{post.likeCount}}</text>
+    </view>
+    <view class="action-bar-item" bind:tap="openCommentBar">
+      <text class="action-icon">💬</text>
+      <text class="action-count">{{post.commentCount}}</text>
+    </view>
+    <button class="action-bar-item share-btn" open-type="share" bind:tap="onShareTap">
+      <text class="action-icon">↗</text>
+      <text class="action-count">{{post.shareCount}}</text>
+    </button>
+  </view>
+
+  <!-- 评论输入弹层 -->
+  <view class="comment-input-mask" wx:if="{{showCommentBar}}" catchtap="closeCommentBar">
+    <view class="comment-input-bar" catchtap="">
+      <view class="comment-reply-tip" wx:if="{{replyTo}}">
+        <text>回复 {{replyTo.name}}</text>
+        <view class="reply-cancel" bind:tap="cancelReply">✕</view>
+      </view>
+      <view class="comment-input-row">
+        <input
+          class="comment-input"
+          value="{{commentInput}}"
+          bindinput="onCommentInput"
+          placeholder="{{replyTo ? '回复 ' + replyTo.name : '写评论...'}}"
+          maxlength="200"
+          focus="{{showCommentBar}}"
+        />
+        <view class="comment-send" bind:tap="onSendComment">发送</view>
+      </view>
+    </view>
+  </view>
+</view>

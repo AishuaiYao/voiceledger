@@ -1,0 +1,157 @@
+<view class="page">
+  <view class="bg-gradient"></view>
+
+  <scroll-view scroll-y class="content-scroll" bindscrolltolower="onLoadMore" lower-threshold="200">
+    <!-- 概览 -->
+    <view class="section stats-section" wx:if="{{records.length > 0}}">
+      <view class="stats-cards">
+        <view class="stat-card income-card">
+          <text class="stat-label">收入</text>
+          <text class="stat-amount">¥{{totalIncome}}</text>
+        </view>
+        <view class="stat-card expense-card">
+          <text class="stat-label">支出</text>
+          <text class="stat-amount">¥{{totalExpense}}</text>
+        </view>
+        <view class="stat-card balance-card">
+          <text class="stat-label">结余</text>
+          <text class="stat-amount">¥{{balance}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 记录列表 -->
+    <view class="section list-section" wx:if="{{records.length > 0}}">
+      <view class="list-header">
+        <view class="list-left">
+          <text class="list-title">记账记录</text>
+          <text class="list-count">共 {{recordCount}} 条 · 支出 {{expenseCount}} · 收入 {{incomeCount}}</text>
+        </view>
+        <view class="day-menu-btn" wx:if="{{filterType === 'date'}}" catchtap="onDayMenuTap">⋮</view>
+      </view>
+      <view class="record-list">
+        <view class="record-item" wx:for="{{records}}" wx:key="id">
+          <view class="record-item-left">
+            <view class="record-cat-icon {{item.type === 'income' ? 'bg-income' : 'bg-expense'}}">
+              <image wx:if="{{item.categoryIcon}}" class="cat-icon-img" src="{{item.categoryIcon}}" mode="aspectFit"></image>
+              <text wx:else>{{item.type === 'income' ? '💰' : '🧾'}}</text>
+            </view>
+            <view class="record-info">
+              <view class="record-cat-row">
+                <view class="record-cat">{{item.category}}{{item.subCategory ? ' · ' + item.subCategory : ''}}</view>
+                <view class="record-image-btn" catchtap="onImageBtnTap" data-id="{{item._id}}" data-url="{{item.imageUrl}}" data-has="{{item.imageFileID ? '1' : ''}}">{{item.imageFileID ? '有图' : '配图'}}</view>
+                <view class="record-edit-btn" catchtap="onEditRecord" data-id="{{item._id}}">编辑</view>
+              </view>
+              <view class="record-desc">{{item.description}}</view>
+              <view class="record-from" wx:if="{{item.creatorNickName}}">来自 {{item.creatorNickName}}</view>
+              <view class="record-tags">
+                <view class="record-tag">
+                  <text>{{item.time}}</text>
+                </view>
+                <view wx:if="{{item.location}}" class="record-tag">
+                  <image class="tag-icon" src="/images/定位.png" mode="aspectFit"></image>
+                  <text>{{item.location}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="record-item-right">
+            <text class="record-amount {{item.type === 'income' ? 'text-income' : 'text-expense'}}">
+              {{item.type === 'income' ? '+' : '-'}}¥{{item.amount}}
+            </text>
+            <view class="record-del" catchtap="onDeleteRecord" data-id="{{item._id}}">✕</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载中 -->
+    <view class="loading-wrap" wx:if="{{loading}}">
+      <view class="loading-ring"></view>
+      <text class="loading-text">正在加载记录...</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="section empty-section" wx:if="{{!loading && records.length === 0}}">
+      <view class="empty-illustration">📝</view>
+      <text class="empty-text">没有相关记录</text>
+    </view>
+
+    <!-- 分页加载状态 -->
+    <view class="load-more-tip" wx:if="{{records.length > 0}}">
+      <text wx:if="{{loadingMore}}">加载中...</text>
+      <text wx:elif="{{hasMore}}">上拉加载更多</text>
+      <text wx:else>已显示全部 {{total}} 条</text>
+    </view>
+
+    <view style="height: 60rpx;"></view>
+  </scroll-view>
+
+  <!-- 编辑记录弹窗 -->
+  <view class="record-edit-mask" wx:if="{{recordEditVisible}}" catchtap="closeRecordEdit">
+    <view class="record-edit-card" catchtap="onModalStop">
+      <text class="record-edit-title">编辑记录</text>
+
+      <view class="edit-field">
+        <text class="edit-label">类型</text>
+        <view class="edit-type-tabs">
+          <view class="edit-type-tab {{recordEditType === 'expense' ? 'edit-type-expense' : ''}}" catchtap="onEditTypeChange" data-type="expense">支出</view>
+          <view class="edit-type-tab {{recordEditType === 'income' ? 'edit-type-income' : ''}}" catchtap="onEditTypeChange" data-type="income">收入</view>
+        </view>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">金额</text>
+        <input class="edit-input" type="digit" value="{{recordEditAmount}}" bindinput="onEditAmountInput" placeholder="0.00"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">分类</text>
+        <input class="edit-input" value="{{recordEditCategory}}" bindinput="onEditCategoryInput" placeholder="如：餐饮" maxlength="10"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">细类</text>
+        <input class="edit-input" value="{{recordEditSubCategory}}" bindinput="onEditSubCategoryInput" placeholder="如：午餐" maxlength="10"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">描述</text>
+        <input class="edit-input" value="{{recordEditDescription}}" bindinput="onEditDescriptionInput" placeholder="补充说明" maxlength="50"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">时间</text>
+        <view class="edit-time-row">
+          <picker class="edit-picker" mode="date" value="{{recordEditDate}}" bindchange="onEditDateChange">
+            <view class="edit-picker-value">{{recordEditDate}}</view>
+          </picker>
+          <picker class="edit-picker" mode="time" value="{{recordEditTime}}" bindchange="onEditTimeChange">
+            <view class="edit-picker-value">{{recordEditTime}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">地点</text>
+        <input class="edit-input" value="{{recordEditLocation}}" bindinput="onEditLocationInput" placeholder="可选" maxlength="50"></input>
+      </view>
+
+      <view class="edit-actions">
+        <view class="edit-cancel" catchtap="closeRecordEdit">取消</view>
+        <view class="edit-confirm" catchtap="confirmRecordEdit">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 图片预览弹窗 -->
+  <view class="image-preview-mask" wx:if="{{imagePreviewVisible}}" catchtap="closeImagePreview">
+    <view class="image-preview-card" catchtap="onModalStop">
+      <view class="image-preview-actions">
+        <view class="image-preview-change" catchtap="onAddImage" data-id="{{imagePreviewId}}">换图</view>
+        <view class="image-preview-delete" catchtap="onDeleteImage" data-id="{{imagePreviewId}}">删除</view>
+      </view>
+      <image class="image-preview-img" src="{{imagePreviewUrl}}" mode="aspectFit" bindtap="onPreviewImage" data-url="{{imagePreviewUrl}}"></image>
+    </view>
+  </view>
+</view>

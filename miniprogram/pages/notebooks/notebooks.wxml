@@ -1,0 +1,182 @@
+<!-- 账本管理页 -->
+<view class="page-container">
+  <view class="bg-gradient"></view>
+
+  <!-- 自定义导航栏 -->
+  <view class="nav-bar" style="padding-top: {{statusBarHeight}}px; height: {{navTotalHeight}}px;">
+    <view class="nav-bar-left" bind:tap="openDrawer">
+      <view class="hamburger">
+        <view class="hamburger-line"></view>
+        <view class="hamburger-line"></view>
+        <view class="hamburger-line"></view>
+      </view>
+    </view>
+    <view class="nav-bar-center">
+      <view class="nav-bar-title">我的账本</view>
+      <view class="notebook-subtitle">点击选择一个账本</view>
+    </view>
+    <view class="nav-bar-right"></view>
+  </view>
+
+  <!-- 账本列表 -->
+  <view class="notebook-list" wx:if="{{notebooks.length > 0}}">
+    <view
+      class="notebook-card {{currentNotebookId === item._id ? 'active' : ''}}"
+      wx:for="{{notebooks}}"
+      wx:key="_id"
+      bind:tap="selectNotebook"
+      data-id="{{item._id}}"
+      data-name="{{item.name}}"
+    >
+      <view class="notebook-icon">
+        <image wx:if="{{item.customIcon}}" class="notebook-icon-img" src="{{item.customIcon}}" mode="aspectFill"></image>
+        <text wx:else>📒</text>
+      </view>
+      <view class="notebook-info">
+        <view class="notebook-name-row">
+          <text class="notebook-name">{{item.name}}</text>
+          <text class="notebook-type-icon">{{item.isTeam ? '👥' : '👤'}}</text>
+          <view class="notebook-team-tag" wx:if="{{item.isTeam}}">多人 · {{item.memberText}}</view>
+          <view class="notebook-solo-tag" wx:else>个人</view>
+        </view>
+        <view class="notebook-desc">{{item.description || '暂无描述'}}</view>
+        <view class="notebook-time">创建于 {{item.timeStr}}</view>
+      </view>
+      <view class="notebook-status">
+        <view class="notebook-current-tag" wx:if="{{currentNotebookId === item._id}}">当前</view>
+        <view class="notebook-actions">
+          <button
+            wx:if="{{item.isOwner}}"
+            class="notebook-invite-btn"
+            open-type="share"
+            data-id="{{item._id}}"
+            data-name="{{item.name}}"
+          >邀请</button>
+          <view class="notebook-member" catch:tap="onShowMembers" data-id="{{item._id}}">成员</view>
+          <view class="notebook-del" catch:tap="onDeleteNotebook" data-id="{{item._id}}" data-name="{{item.name}}">删除</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-section" wx:if="{{notebooks.length === 0}}">
+    <view class="empty-illustration">📒</view>
+    <text class="empty-text">还没有账本</text>
+    <text class="empty-hint">创建你的第一个账本开始记账吧</text>
+    <button class="btn-create-first" bind:tap="showCreatePopup">创建账本</button>
+  </view>
+
+  <!-- 右下角悬浮加号：创建账本 -->
+  <view class="fab-add" bind:tap="showCreatePopup">+</view>
+
+  <!-- 选择账本类型弹窗 -->
+  <view class="create-mask" wx:if="{{showTypeSelect}}" catchtouchmove="{{true}}">
+    <view class="type-popup">
+      <text class="create-title">选择账本类型</text>
+      <text class="create-desc">选择一种预设类型快速创建</text>
+
+      <view class="type-grid">
+        <view
+          class="type-card"
+          wx:for="{{presetTypes}}"
+          wx:key="name"
+          bind:tap="onSelectType"
+          data-name="{{item.name}}"
+          data-icon="{{item.icon}}"
+          data-desc="{{item.desc}}"
+        >
+          <image class="type-icon" src="{{item.icon}}" mode="aspectFit"></image>
+          <text class="type-name">{{item.name}}</text>
+          <text class="type-desc">{{item.desc}}</text>
+        </view>
+
+        <view class="type-card type-custom" bind:tap="showCustomInput">
+          <view class="type-icon">＋</view>
+          <text class="type-name">自定义</text>
+          <text class="type-desc">创建你自己的账本</text>
+        </view>
+      </view>
+
+      <view class="create-cancel" bind:tap="closeTypeSelect">取消</view>
+    </view>
+  </view>
+
+  <!-- 自定义创建账本弹窗 -->
+  <view class="create-mask" wx:if="{{showCreate}}" catchtouchmove="{{true}}">
+    <view class="create-popup">
+      <text class="create-title">创建账本</text>
+      <text class="create-desc">给你的账本起个名字</text>
+
+      <view class="icon-upload" bind:tap="onChooseIcon">
+        <image wx:if="{{customIcon}}" class="icon-preview" src="{{customIcon}}" mode="aspectFill"></image>
+        <view wx:else class="icon-placeholder">
+          <text class="icon-placeholder-text">📷</text>
+          <text class="icon-placeholder-hint">上传图标</text>
+        </view>
+      </view>
+      <view class="icon-remove" wx:if="{{customIcon}}" catch:tap="onRemoveIcon">移除</view>
+
+      <view class="input-wrap">
+        <input
+          class="create-input"
+          placeholder="如：日常开销、旅行账本"
+          value="{{newName}}"
+          bindinput="onNameInput"
+          maxlength="20"
+        />
+      </view>
+
+      <view class="input-wrap">
+        <textarea
+          class="create-textarea"
+          placeholder="描述（选填）"
+          value="{{newDesc}}"
+          bindinput="onDescInput"
+          maxlength="50"
+        ></textarea>
+      </view>
+
+      <button
+        class="btn-create"
+        bind:tap="handleCreate"
+        disabled="{{creating}}"
+        loading="{{creating}}"
+      >
+        {{creating ? '创建中...' : '创建'}}
+      </button>
+
+      <view class="create-cancel" bind:tap="closeCreate">取消</view>
+    </view>
+  </view>
+
+  <!-- 成员管理弹窗 -->
+  <view class="create-mask" wx:if="{{showMembers}}" catchtouchmove="{{true}}">
+    <view class="members-popup">
+      <text class="create-title">成员管理</text>
+      <text class="create-desc">{{memberNotebook.name}} · 共 {{memberNotebook.memberCount}} 人</text>
+
+      <view class="members-list">
+        <view class="member-item" wx:for="{{memberNotebook.members}}" wx:key="openId">
+          <image class="member-avatar" wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" mode="aspectFill"></image>
+          <view wx:else class="member-avatar member-avatar-default">{{item.nickName ? item.nickName[0] : '?'}}</view>
+          <view class="member-info">
+            <text class="member-name">{{item.nickName}}</text>
+            <text class="member-role" wx:if="{{item.isOwner}}">创建者</text>
+          </view>
+          <view class="member-remove" wx:if="{{memberNotebook.isOwner && !item.isOwner}}" catch:tap="onRemoveMember" data-openid="{{item.openId}}">移除</view>
+        </view>
+      </view>
+
+      <view class="create-cancel" bind:tap="closeMembers">关闭</view>
+    </view>
+  </view>
+
+  <!-- 导航抽屉 -->
+  <nav-drawer
+    visible="{{drawerVisible}}"
+    currentPath="/pages/notebooks/notebooks"
+    bind:close="closeDrawer"
+    bind:navigate="onNavigate"
+  ></nav-drawer>
+</view>

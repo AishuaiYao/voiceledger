@@ -1,0 +1,9 @@
+{
+  "name": "asr",
+  "version": "1.0.0",
+  "description": "云端语音识别（阿里云 qwen-audio ASR）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

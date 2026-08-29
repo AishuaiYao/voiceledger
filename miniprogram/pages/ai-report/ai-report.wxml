@@ -1,0 +1,67 @@
+<view class="page">
+  <!-- 人物画像卡 -->
+  <view class="portrait-card" wx:if="{{!error}}">
+    <view class="portrait-head">
+      <view class="portrait-avatar">
+        <text class="portrait-avatar-char">{{avatarChar}}</text>
+      </view>
+      <view class="portrait-id">
+        <text class="portrait-name">{{portraitTitle}}</text>
+        <text class="portrait-desc">{{portraitDesc}}</text>
+      </view>
+    </view>
+
+    <!-- 画像标签 -->
+    <view class="portrait-tags" wx:if="{{portraitTags.length > 0}}">
+      <view class="portrait-tag" wx:for="{{portraitTags}}" wx:key="index">{{item}}</view>
+    </view>
+
+    <!-- 画像数据 -->
+    <view class="portrait-stats">
+      <view class="stat-item">
+        <text class="stat-label">总支出</text>
+        <text class="stat-value stat-expense">¥{{totalExpense}}</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-label">总收入</text>
+        <text class="stat-value stat-income">¥{{totalIncome}}</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-label">月均支出</text>
+        <text class="stat-value stat-expense">¥{{monthAvg}}</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-label">记录笔数</text>
+        <text class="stat-value">{{expenseCount + incomeCount}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 生成中 -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="loading-ring"></view>
+    <text class="loading-text">正在描摹你的消费画像，请稍候...</text>
+  </view>
+
+  <!-- 错误 -->
+  <view class="error-wrap" wx:if="{{error && !loading}}">
+    <text class="error-text">{{error}}</text>
+  </view>
+
+  <!-- 画像解读：AI 分点 -->
+  <block wx:if="{{!loading && sections.length > 0}}">
+    <view class="section-title">AI 画像解读</view>
+    <view class="report-list">
+      <view class="report-item" wx:for="{{sections}}" wx:key="index">
+        <view class="report-badge" wx:if="{{item.no}}">{{item.no}}</view>
+        <view class="report-dot" wx:else></view>
+        <text class="report-content" user-select>{{item.text}}</text>
+      </view>
+    </view>
+
+    <!-- 重新生成 -->
+    <view class="footer">
+      <button class="regenerate-btn" bindtap="generate">重新生成画像</button>
+    </view>
+  </block>
+</view>

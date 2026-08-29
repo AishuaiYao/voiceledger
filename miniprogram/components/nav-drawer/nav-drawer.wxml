@@ -1,0 +1,24 @@
+<!-- 导航抽屉组件 -->
+<view class="drawer-mask {{visible ? 'show' : ''}}" bind:tap="close" catch:touchmove="preventMove"></view>
+<view class="drawer {{visible ? 'show' : ''}}">
+  <view class="drawer-header" style="padding-top: {{drawerHeaderPaddingTop}}px;">
+    <text class="drawer-title">智能语音记账</text>
+    <text class="drawer-subtitle">说说话，轻松记账</text>
+  </view>
+  <view class="drawer-menu">
+    <view
+      class="drawer-item {{currentPath === item.path ? 'active' : ''}}"
+      wx:for="{{menuItems}}"
+      wx:key="path"
+      bind:tap="navigate"
+      data-path="{{item.path}}"
+    >
+      <image class="drawer-item-icon" src="{{item.icon}}" mode="aspectFit"></image>
+      <text class="drawer-item-text">{{item.name}}</text>
+      <text class="drawer-item-arrow" wx:if="{{currentPath === item.path}}">●</text>
+    </view>
+  </view>
+  <view class="drawer-footer">
+    <text class="drawer-version">v1.0.0</text>
+  </view>
+</view>

@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/notebooks/notebooks",
+    "pages/account/account",
+    "pages/records/records",
+    "pages/discover/discover",
+    "pages/post-detail/post-detail",
+    "pages/ai-report/ai-report"
+  ],
+  "window": {
+    "navigationBarTitleText": "智能语音记账",
+    "navigationBarBackgroundColor": "#e0f2fe",
+    "navigationBarTextStyle": "black"
+  },
+  "requiredPrivateInfos": [],
+  "usingComponents": {}
+}

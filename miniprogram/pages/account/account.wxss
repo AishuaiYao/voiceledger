@@ -1,0 +1,400 @@
+/* 我的账号 - 马卡龙毛玻璃风格 */
+
+.page-container {
+  position: relative;
+  min-height: 100vh;
+  padding: 0 24rpx;
+  padding-bottom: 32rpx;
+  box-sizing: border-box;
+}
+
+.bg-gradient {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 30%, #fef3f2 70%, #fce7f3 100%);
+  z-index: 0;
+}
+
+/* ========== 自定义导航栏 ========== */
+
+.nav-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 24rpx;
+}
+
+.nav-bar-left {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburger {
+  width: 44rpx;
+  height: 36rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8rpx;
+}
+
+.hamburger-line {
+  height: 4rpx;
+  background: #475569;
+  border-radius: 2rpx;
+}
+
+.nav-bar-title {
+  flex: 1;
+  text-align: center;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #475569;
+}
+
+.nav-bar-right {
+  width: 80rpx;
+}
+
+/* ========== 账号卡片 ========== */
+
+.account-card {
+  position: relative;
+  z-index: 1;
+  margin-top: 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 40rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4rpx 24rpx rgba(135, 206, 235, 0.15);
+}
+
+.account-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(56, 189, 248, 0.2);
+}
+
+.account-avatar image {
+  width: 100%;
+  height: 100%;
+}
+
+.account-avatar.default {
+  background: linear-gradient(135deg, #bae6fd, #38bdf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52rpx;
+}
+
+.account-name {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8rpx;
+}
+
+.account-phone {
+  font-size: 26rpx;
+  color: #64748b;
+}
+
+.account-phone.hint {
+  color: #94a3b8;
+  font-size: 24rpx;
+}
+
+/* ========== 菜单列表 ========== */
+
+.section {
+  position: relative;
+  z-index: 1;
+  margin-top: 24rpx;
+}
+
+.menu-list {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(135, 206, 235, 0.15);
+  overflow: hidden;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx;
+  border-bottom: 1rpx solid rgba(186, 230, 253, 0.2);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item-hover {
+  background: rgba(186, 230, 253, 0.25);
+}
+
+.menu-left {
+  display: flex;
+  align-items: center;
+}
+
+.menu-icon {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.menu-arrow {
+  font-size: 32rpx;
+  color: #cbd5e1;
+  line-height: 1;
+}
+
+.menu-text {
+  font-size: 28rpx;
+  color: #334155;
+}
+
+.menu-value {
+  font-size: 26rpx;
+  color: #94a3b8;
+}
+
+/* ========== 退出登录按钮 ========== */
+
+.logout-wrap {
+  position: relative;
+  z-index: 1;
+  margin-top: 48rpx;
+  padding: 0 24rpx;
+}
+
+.btn-logout {
+  width: 100%;
+  height: 88rpx;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
+  color: #fb7185;
+  font-size: 30rpx;
+  font-weight: 500;
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4rpx 24rpx rgba(135, 206, 235, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-logout::after {
+  border: none;
+}
+
+.btn-logout:active {
+  transform: scale(0.96);
+  background: rgba(254, 205, 211, 0.4);
+}
+
+/* ========== 登录按钮 ========== */
+
+.btn-login-card {
+  margin-top: 24rpx;
+  width: 320rpx;
+  height: 76rpx;
+  background: linear-gradient(135deg, #7dd3fc, #38bdf8);
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 50rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(56, 189, 248, 0.3);
+}
+
+.btn-login-card::after {
+  border: none;
+}
+
+.btn-login-card:active {
+  transform: scale(0.95);
+}
+
+/* ========== 注册弹窗 ========== */
+
+.register-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: maskIn 0.3s ease;
+}
+
+@keyframes maskIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.register-popup {
+  width: 580rpx;
+  background: #fff;
+  border-radius: 32rpx;
+  padding: 48rpx 40rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: popupIn 0.35s ease;
+}
+
+@keyframes popupIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.register-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8rpx;
+}
+
+.register-desc {
+  font-size: 26rpx;
+  color: #94a3b8;
+  margin-bottom: 36rpx;
+}
+
+/* 头像选择按钮 */
+.avatar-btn {
+  width: 160rpx;
+  height: 160rpx;
+  padding: 0;
+  margin: 0 0 32rpx 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-btn::after {
+  border: none;
+}
+
+.avatar-preview {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 4rpx solid #38bdf8;
+  box-shadow: 0 4rpx 16rpx rgba(56, 189, 248, 0.25);
+}
+
+.avatar-placeholder {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 3rpx dashed #cbd5e1;
+  background: #f0f9ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-placeholder-icon {
+  font-size: 48rpx;
+  margin-bottom: 4rpx;
+}
+
+.avatar-placeholder-text {
+  font-size: 20rpx;
+  color: #94a3b8;
+}
+
+/* 昵称输入 */
+.nickname-wrap {
+  width: 100%;
+  margin-bottom: 32rpx;
+}
+
+.nickname-input {
+  width: 100%;
+  height: 88rpx;
+  background: #f0f9ff;
+  border-radius: 24rpx;
+  padding: 0 28rpx;
+  font-size: 30rpx;
+  color: #334155;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.nickname-input::placeholder {
+  color: #cbd5e1;
+}
+
+/* 注册按钮 */
+.btn-register {
+  width: 100%;
+  height: 88rpx;
+  background: linear-gradient(135deg, #7dd3fc, #38bdf8);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-radius: 50rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 20rpx rgba(56, 189, 248, 0.3);
+  margin-bottom: 20rpx;
+}
+
+.btn-register::after {
+  border: none;
+}
+
+.btn-register:active {
+  transform: scale(0.95);
+}
+
+.btn-register[disabled] {
+  opacity: 0.7;
+}
+
+.register-skip {
+  font-size: 26rpx;
+  color: #94a3b8;
+  padding: 8rpx 16rpx;
+}
+
+.register-skip:active {
+  color: #38bdf8;
+}

@@ -1,0 +1,118 @@
+<!-- 我的账号页 -->
+<view class="page-container">
+  <view class="bg-gradient"></view>
+
+  <!-- 自定义导航栏 -->
+  <view class="nav-bar" style="padding-top: {{statusBarHeight}}px; height: {{navTotalHeight}}px;">
+    <view class="nav-bar-left" bind:tap="openDrawer">
+      <view class="hamburger">
+        <view class="hamburger-line"></view>
+        <view class="hamburger-line"></view>
+        <view class="hamburger-line"></view>
+      </view>
+    </view>
+    <view class="nav-bar-title">我的账号</view>
+    <view class="nav-bar-right"></view>
+  </view>
+
+  <!-- 已登录：个人信息卡片 -->
+  <view class="account-card" wx:if="{{userInfo}}">
+    <view class="account-avatar" wx:if="{{userInfo.avatarUrl}}">
+      <image src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+    </view>
+    <view class="account-avatar default" wx:else>
+      <text>👤</text>
+    </view>
+    <text class="account-name">{{userInfo.nickName || '用户'}}</text>
+    <text class="account-phone hint">已登录</text>
+  </view>
+
+  <!-- 未登录：显示登录入口 -->
+  <view class="account-card" wx:elif="{{!showRegister}}">
+    <view class="account-avatar default">
+      <text>👤</text>
+    </view>
+    <text class="account-name">未登录</text>
+    <text class="account-phone hint">登录后同步你的记账数据</text>
+    <button class="btn-login-card" bind:tap="showLoginPopup">微信一键登录</button>
+  </view>
+
+  <!-- 菜单列表 -->
+  <view class="section">
+    <view class="menu-list">
+      <view class="menu-item" bind:tap="onMessageTap" hover-class="menu-item-hover">
+        <view class="menu-left">
+          <text class="menu-text">消息</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item">
+        <text class="menu-text">版本号</text>
+        <text class="menu-value">v1.0.0</text>
+      </view>
+      <view class="menu-item">
+        <text class="menu-text">关于我们</text>
+        <text class="menu-value">voiceledger@163.com</text>
+      </view>
+      <view class="menu-item" bind:tap="onSupportTap" hover-class="menu-item-hover">
+        <view class="menu-left">
+          <image class="menu-icon" src="/images/支持.png" mode="aspectFit"></image>
+          <text class="menu-text">赏一个</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-wrap" wx:if="{{userInfo}}">
+    <button class="btn-logout" bind:tap="handleLogout">退出登录</button>
+  </view>
+
+  <!-- 注册弹窗 -->
+  <view class="register-mask" wx:if="{{showRegister}}" catchtouchmove="{{true}}">
+    <view class="register-popup">
+      <text class="register-title">完善账号信息</text>
+      <text class="register-desc">设置头像和昵称，开始智能记账</text>
+
+      <!-- 头像选择 -->
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image class="avatar-preview" src="{{avatarUrl}}" mode="aspectFill" wx:if="{{avatarUrl}}"></image>
+        <view class="avatar-placeholder" wx:else>
+          <text class="avatar-placeholder-icon">📷</text>
+          <text class="avatar-placeholder-text">点击选择头像</text>
+        </view>
+      </button>
+
+      <!-- 昵称输入 -->
+      <view class="nickname-wrap">
+        <input
+          class="nickname-input"
+          type="nickname"
+          placeholder="请输入昵称"
+          value="{{nickName}}"
+          bindinput="onNicknameInput"
+        />
+      </view>
+
+      <button
+        class="btn-register {{submitting ? 'loading' : ''}}"
+        bind:tap="handleRegister"
+        disabled="{{submitting}}"
+        loading="{{submitting}}"
+      >
+        {{submitting ? '登录中...' : '完成登录'}}
+      </button>
+
+      <view class="register-skip" bind:tap="closeRegister">暂不登录</view>
+    </view>
+  </view>
+
+  <!-- 导航抽屉 -->
+  <nav-drawer
+    visible="{{drawerVisible}}"
+    currentPath="/pages/account/account"
+    bind:close="closeDrawer"
+    bind:navigate="onNavigate"
+  ></nav-drawer>
+</view>

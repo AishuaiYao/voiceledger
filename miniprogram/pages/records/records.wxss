@@ -1,0 +1,488 @@
+page {
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 30%, #fef3f2 70%, #fce7f3 100%);
+  min-height: 100vh;
+}
+
+.page {
+  position: relative;
+  min-height: 100vh;
+}
+
+.bg-gradient {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.4) 0%, rgba(252, 231, 243, 0.4) 100%);
+  z-index: 0;
+}
+
+.content-scroll {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.section {
+  padding: 16rpx 24rpx;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 4rpx 16rpx;
+}
+
+.list-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  overflow: hidden;
+}
+
+.list-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.list-count {
+  font-size: 24rpx;
+  color: #94a3b8;
+}
+
+/* 分页加载更多提示 */
+.load-more-tip {
+  text-align: center;
+  padding: 24rpx 0 40rpx;
+  color: #94a3b8;
+  font-size: 24rpx;
+}
+
+/* 当天记录菜单按钮：三个点，低调，仅按日期进入时显示 */
+.day-menu-btn {
+  flex-shrink: 0;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: rgba(100, 116, 139, 0.08);
+  color: #94a3b8;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 概览 */
+.stats-cards {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+
+.stat-card {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 8rpx;
+  border-radius: 16rpx;
+}
+
+.income-card { background: rgba(187, 247, 208, 0.5); }
+.expense-card { background: rgba(254, 215, 170, 0.5); }
+.balance-card { background: rgba(186, 230, 253, 0.5); }
+
+.stat-label {
+  display: block;
+  font-size: 24rpx;
+  color: #64748b;
+  margin-bottom: 6rpx;
+}
+
+.stat-amount {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #334155;
+}
+
+/* 记录列表 */
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(135, 206, 235, 0.1);
+}
+
+.record-item-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+}
+
+.record-cat-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.cat-icon-img {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.bg-income { background: rgba(187, 247, 208, 0.6); }
+.bg-expense { background: rgba(254, 215, 170, 0.6); }
+
+.record-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.record-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.record-cat {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #334155;
+}
+
+.record-desc {
+  font-size: 24rpx;
+  color: #94a3b8;
+  margin-top: 4rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-from {
+  font-size: 20rpx;
+  color: #7c3aed;
+  margin-top: 4rpx;
+}
+
+.record-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 6rpx;
+}
+
+.record-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  background: rgba(186, 230, 253, 0.35);
+  font-size: 22rpx;
+  color: #64748b;
+  gap: 4rpx;
+}
+
+.record-edit-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.record-edit-card {
+  box-sizing: border-box;
+  width: 620rpx;
+  max-height: 80vh;
+  padding: 32rpx 32rpx 28rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20rpx);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.record-edit-title {
+  display: block;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 24rpx;
+}
+
+.edit-field {
+  margin-bottom: 20rpx;
+}
+
+.edit-label {
+  display: block;
+  font-size: 24rpx;
+  color: #94a3b8;
+  margin-bottom: 10rpx;
+}
+
+.edit-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 76rpx;
+  padding: 0 20rpx;
+  border-radius: 16rpx;
+  background: rgba(241, 245, 249, 0.7);
+  color: #334155;
+  font-size: 30rpx;
+  line-height: 76rpx;
+}
+
+.edit-type-tabs {
+  display: flex;
+  gap: 16rpx;
+}
+
+.edit-type-tab {
+  flex: 1;
+  padding: 14rpx 0;
+  border-radius: 16rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #64748b;
+  background: rgba(241, 245, 249, 0.7);
+  transition: all 0.2s;
+}
+
+.edit-type-expense {
+  color: #fff;
+  background: linear-gradient(135deg, #fda4af, #f87171);
+}
+
+.edit-type-income {
+  color: #fff;
+  background: linear-gradient(135deg, #6ee7b7, #34d399);
+}
+
+.edit-time-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.edit-picker {
+  flex: 1;
+}
+
+.edit-picker-value {
+  padding: 18rpx 0;
+  text-align: center;
+  border-radius: 16rpx;
+  background: rgba(241, 245, 249, 0.7);
+  color: #334155;
+  font-size: 28rpx;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 28rpx;
+}
+
+.edit-cancel,
+.edit-confirm {
+  flex: 1;
+  padding: 20rpx;
+  border-radius: 40rpx;
+  text-align: center;
+  font-size: 28rpx;
+}
+
+.edit-cancel {
+  color: #64748b;
+  background: rgba(241, 245, 249, 0.8);
+}
+
+.edit-confirm {
+  color: #fff;
+  background: linear-gradient(135deg, #c4b5fd, #a78bfa);
+}
+
+.image-preview-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.image-preview-card {
+  position: relative;
+  width: 600rpx;
+  padding: 20rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20rpx);
+}
+
+.image-preview-actions {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  z-index: 2;
+  display: flex;
+  gap: 12rpx;
+}
+
+.image-preview-change,
+.image-preview-delete {
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+  color: #fff;
+  font-size: 24rpx;
+}
+
+.image-preview-change {
+  background: linear-gradient(135deg, #c4b5fd, #a78bfa);
+}
+
+.image-preview-delete {
+  background: linear-gradient(135deg, #fda4af, #fb7185);
+}
+
+.image-preview-img {
+  width: 100%;
+  height: 600rpx;
+  border-radius: 16rpx;
+}
+
+.tag-icon {
+  width: 22rpx;
+  height: 22rpx;
+  flex-shrink: 0;
+}
+
+.record-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12rpx;
+}
+
+.record-ops {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.record-edit-btn {
+  padding: 4rpx 16rpx;
+  border-radius: 16rpx;
+  color: #7c3aed;
+  background: rgba(221, 214, 254, 0.5);
+  font-size: 20rpx;
+  line-height: 1.6;
+}
+
+.record-image-btn {
+  padding: 6rpx 10rpx;
+  border-radius: 16rpx;
+  color: #7c3aed;
+  background: rgba(221, 214, 254, 0.5);
+  font-size: 20rpx;
+}
+
+.record-image-thumb {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 12rpx;
+  background: rgba(241, 245, 249, 0.8);
+}
+
+.record-amount {
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.text-income { color: #22c55e; }
+.text-expense { color: #f43f5e; }
+
+.record-del {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: rgba(251, 113, 133, 0.15);
+  color: #fb7185;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+}
+
+/* 加载中 */
+.loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 160rpx 0 40rpx;
+  gap: 24rpx;
+}
+
+.loading-ring {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba(99, 102, 241, 0.2);
+  border-top-color: #6366f1;
+  animation: spin 0.9s linear infinite;
+}
+
+.loading-text {
+  font-size: 26rpx;
+  color: #94a3b8;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 空状态 */
+.empty-section {
+  text-align: center;
+  padding: 80rpx 0;
+}
+
+.empty-illustration {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  display: block;
+  font-size: 30rpx;
+  color: #64748b;
+}

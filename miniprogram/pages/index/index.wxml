@@ -1,0 +1,380 @@
+<view class="page">
+  <view class="bg-gradient"></view>
+
+  <!-- 自定义导航栏 -->
+  <view class="nav-bar" style="padding-top: {{statusBarHeight}}px; height: {{navBarHeight}}px;">
+    <view class="nav-bar-left" bind:tap="openDrawer">
+      <view class="hamburger">
+        <view class="hamburger-line"></view>
+        <view class="hamburger-line"></view>
+        <view class="hamburger-line"></view>
+      </view>
+    </view>
+    <view class="nav-bar-title">智能语音记账</view>
+    <view class="nav-bar-right"></view>
+  </view>
+
+  <scroll-view class="main-scroll" scroll-y="true" style="top: {{navTotalHeight}}px;">
+
+    <!-- 当前账本信息 -->
+    <view class="notebook-bar" wx:if="{{hasNotebook}}">
+      <image wx:if="{{currentNotebookIcon}}" class="notebook-bar-icon" src="{{currentNotebookIcon}}" mode="aspectFit"></image>
+      <text wx:else class="notebook-bar-icon">📒</text>
+      <text class="notebook-bar-name">{{currentNotebookName}}</text>
+      <text class="notebook-type-icon">{{currentNotebookIsTeam ? '👥' : '👤'}}</text>
+      <view class="notebook-team-badge" wx:if="{{currentNotebookIsTeam}}">多人 · {{currentNotebookMemberCount}}人</view>
+      <view class="notebook-solo-badge" wx:else>个人</view>
+      <text class="notebook-bar-change" bind:tap="goToNotebooks">切换</text>
+    </view>
+
+    <!-- 无账本时引导创建 -->
+    <view class="no-notebook-card" wx:if="{{!hasNotebook}}">
+      <view class="no-notebook-icon">📒</view>
+      <text class="no-notebook-text">还没有账本</text>
+      <text class="no-notebook-hint">创建账本后才能开始记账</text>
+      <button class="btn-create-notebook" bind:tap="goToNotebooks">去创建账本</button>
+    </view>
+
+    <!-- ====== 顶部：按住说话 ====== -->
+    <view class="section record-section" wx:if="{{hasNotebook}}">
+
+      <!-- 录音状态提示 -->
+      <view class="record-status {{slideCancel ? 'cancel-status' : ''}}" wx:if="{{recording}}">
+        <view class="recording-dot"></view>
+        <text wx:if="{{slideCancel}}">松开取消录音</text>
+        <text wx:else>{{recordDuration}}s 后结束 · 左右滑动取消</text>
+      </view>
+      <view class="record-status" wx:elif="{{loading}}">
+        <text>{{loadingText}}</text>
+      </view>
+      <view class="record-status" wx:else>
+        <text>说出时间地点效果更好哦</text>
+      </view>
+
+      <!-- 大号录音按钮：处理中的语音排队，不阻塞继续录音；左右滑出可取消 -->
+      <view
+        class="record-btn {{recording ? 'recording' : ''}} {{slideCancel ? 'cancel' : ''}}"
+        bindtouchstart="onRecordStart"
+        bindtouchmove="onRecordMove"
+        bindtouchend="onRecordEnd"
+        bindtouchcancel="onRecordEnd"
+      >
+        <!-- 云雾背景 -->
+        <view class="cloud-bg" wx:if="{{!recording}}">
+          <view class="cloud-blob cloud-blob-1"></view>
+          <view class="cloud-blob cloud-blob-2"></view>
+          <view class="cloud-blob cloud-blob-3"></view>
+          <view class="cloud-blob cloud-blob-4"></view>
+          <view class="cloud-blob cloud-blob-5"></view>
+        </view>
+        <view class="record-btn-inner">
+          <view class="mic-icon">
+            <view class="mic-body"></view>
+            <view class="mic-stand"></view>
+          </view>
+          <text class="record-btn-text">{{recording ? (slideCancel ? '松手取消' : '松开') : '按住说话'}}</text>
+        </view>
+        <!-- 录音波纹 -->
+        <view class="ripple ripple1" wx:if="{{recording}}"></view>
+        <view class="ripple ripple2" wx:if="{{recording}}"></view>
+        <view class="ripple ripple3" wx:if="{{recording}}"></view>
+      </view>
+
+      <!-- 排队提示 -->
+      <view class="queue-status" wx:if="{{queueCount > 0}}">
+        <text>还有 {{queueCount}} 条排队处理中，可继续录入</text>
+      </view>
+
+      <!-- 文本输入按钮 -->
+      <view class="text-input-btn" bindtap="onTextInput">
+        <text class="text-input-icon">⌨</text>
+      </view>
+    </view>
+
+    <!-- ====== 中部：ASR 结果 ====== -->
+    <view class="section result-section" wx:if="{{asrText}}">
+      <view class="result-card asr-card">
+        <view class="result-label">
+          <text class="label-icon">🎤</text>
+          <text>识别结果</text>
+          <view class="play-btn-mini {{playingIndex >= 0 ? 'playing' : ''}}" catchtap="onPlayAudio">
+            <text>{{playingIndex >= 0 ? '⏸' : '▶'}}</text>
+          </view>
+        </view>
+        <view class="result-content">{{asrText}}</view>
+      </view>
+    </view>
+
+    <!-- ====== 统计概览 ====== -->
+    <view class="section stats-section" wx:if="{{records.length > 0}}">
+      <view class="section-title">收支概览</view>
+      <view class="section-subtitle" wx:if="{{dateRange}}">{{dateRange}}</view>
+      <view class="stats-cards">
+        <view class="stat-card income-card">
+          <text class="stat-label">收入</text>
+          <text class="stat-amount">¥{{totalIncome}}</text>
+        </view>
+        <view class="stat-card expense-card">
+          <text class="stat-label">支出</text>
+          <text class="stat-amount">¥{{totalExpense}}</text>
+        </view>
+        <view class="stat-card balance-card">
+          <text class="stat-label">结余</text>
+          <text class="stat-amount">¥{{balance}}</text>
+        </view>
+      </view>
+
+      <!-- 饼状图 -->
+    </view>
+
+    <!-- ====== 记账列表 ======-->
+    <view class="section list-section" wx:if="{{records.length > 0}}">
+      <view class="section-title">记账记录</view>
+
+      <!-- Tab 切换 -->
+      <view class="tab-bar">
+        <view class="tab {{activeTab === 'all' ? 'active' : ''}}" bindtap="onTabChange" data-tab="all">全部 ({{allCount}})</view>
+        <view class="tab {{activeTab === 'expense' ? 'active' : ''}}" bindtap="onTabChange" data-tab="expense">支出 ({{expenseCount}})</view>
+        <view class="tab {{activeTab === 'income' ? 'active' : ''}}" bindtap="onTabChange" data-tab="income">收入 ({{incomeCount}})</view>
+      </view>
+
+      <!-- 记录列表 -->
+      <view class="record-list">
+        <view class="record-item" wx:for="{{filteredRecords}}" wx:key="id">
+          <view class="record-item-left">
+            <view class="record-cat-icon {{item.type === 'income' ? 'bg-income' : 'bg-expense'}}">
+              <image wx:if="{{item.categoryIcon}}" class="cat-icon-img" src="{{item.categoryIcon}}" mode="aspectFit"></image>
+              <text wx:else>{{item.type === 'income' ? '💰' : '🧾'}}</text>
+            </view>
+            <view class="record-info">
+              <view class="record-cat-row">
+                <view class="record-cat">{{item.category}}{{item.subCategory ? ' · ' + item.subCategory : ''}}</view>
+                <view class="record-image-btn" catchtap="onImageBtnTap" data-id="{{item._id}}" data-url="{{item.imageUrl}}" data-has="{{item.imageFileID ? '1' : ''}}">{{item.imageFileID ? '有图' : '配图'}}</view>
+                <view class="record-edit-btn" catchtap="onEditRecord" data-id="{{item._id}}">编辑</view>
+              </view>
+              <view class="record-desc">{{item.description}}</view>
+              <view class="record-from" wx:if="{{currentNotebookIsTeam && item.creatorNickName}}">来自 {{item.creatorNickName}}</view>
+              <view class="record-tags">
+                <view class="record-tag" catchtap="onTagTap" data-type="time" data-value="{{item.time}}">
+                  <text>{{item.time}}</text>
+                </view>
+                <view wx:if="{{item.location}}" class="record-tag" catchtap="onTagTap" data-type="location" data-value="{{item.location}}">
+                  <image class="tag-icon" src="/images/定位.png" mode="aspectFit"></image>
+                  <text>{{item.location}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="record-item-right">
+            <text class="record-amount {{item.type === 'income' ? 'text-income' : 'text-expense'}}">
+              {{item.type === 'income' ? '+' : '-'}}¥{{item.amount}}
+            </text>
+            <view class="record-del" catchtap="onDeleteRecord" data-id="{{item._id}}">✕</view>
+          </view>
+        </view>
+
+        <view class="empty-tip" wx:if="{{filteredRecords.length === 0}}">
+          <text>暂无记录</text>
+        </view>
+        <view class="view-all-btn" wx:if="{{showAllBtn}}" bindtap="goToAllRecords">查看全部</view>
+      </view>
+    </view>
+
+    <!-- ====== 综合分析 ====== -->
+    <view class="analysis-section" wx:if="{{records.length > 0}}">
+      <view class="section analysis-header">
+        <view class="section-title">综合分析</view>
+        <view class="analysis-filter">
+          <text class="analysis-filter-label">统计时间：{{analysisLabel}}</text>
+          <picker mode="date" fields="month" value="{{analysisMonth}}" bindchange="onAnalysisMonthChange">
+            <view class="analysis-month-btn">选择月份</view>
+          </picker>
+          <view class="analysis-all-btn" wx:if="{{analysisMonth}}" bindtap="clearAnalysisMonth">全部</view>
+        </view>
+      </view>
+
+      <!-- 支出占比 -->
+      <view class="section chart-section" wx:if="{{pieData.length > 0}}">
+        <view class="analysis-subtitle">支出占比</view>
+        <view class="chart-card">
+          <view class="chart-container">
+            <canvas canvas-id="pieChart" id="pieChart" type="2d" class="pie-canvas"></canvas>
+            <view class="chart-legend">
+              <view class="legend-item" wx:for="{{pieData}}" wx:key="index">
+                <view class="legend-dot" style="background: {{item.color}};"></view>
+                <text class="legend-label">{{item.name}}</text>
+                <text class="legend-value">¥{{item.value}}</text>
+                <text class="legend-percent">{{item.percent}}%</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 每日消费 -->
+      <view class="section daily-section" wx:if="{{calendarDays.length > 0 || monthlyHeat.length > 0}}">
+        <view class="analysis-subtitle">每日消费</view>
+        <view class="daily-card">
+          <!-- 选择具体月份：当月每日热力图 -->
+          <block wx:if="{{analysisMonth}}">
+            <view class="calendar-header">
+              <view class="calendar-month-wrap">
+                <text class="calendar-month">{{calendarLabel}}</text>
+                <view class="cal-menu-btn" wx:if="{{analysisMonth}}" catchtap="onCalendarMenuTap">⋮</view>
+              </view>
+              <text class="calendar-month-total">支出 ¥{{dailyExpenseTotal}}</text>
+            </view>
+            <view class="weekday-row">
+              <text wx:for="{{['日','一','二','三','四','五','六']}}" wx:key="*this">{{item}}</text>
+            </view>
+            <view class="calendar-grid">
+              <view wx:for="{{calendarDays}}" wx:key="index" class="calendar-day {{item.empty ? 'calendar-empty' : 'heat-level-' + item.level}}" bindtap="onCalendarDayTap" data-day="{{item.day}}" data-empty="{{item.empty}}" data-amount="{{item.amount}}">
+                <text wx:if="{{!item.empty}}" class="calendar-day-number">{{item.day}}</text>
+                <text wx:if="{{item.amount > 0}}" class="calendar-day-amount">¥{{item.amount}}</text>
+              </view>
+            </view>
+          </block>
+          <!-- 全部时间：12 个月热力图 -->
+          <block wx:else>
+            <view class="monthly-grid">
+              <view wx:for="{{monthlyHeat}}" wx:key="index" class="monthly-cell heat-level-{{item.level}}">
+                <text class="monthly-month">{{item.label}}</text>
+                <text class="monthly-amount">¥{{item.amount}}</text>
+              </view>
+            </view>
+          </block>
+        </view>
+      </view>
+    </view>
+
+    <!-- ====== 我的消费画像 ====== -->
+    <view class="section ai-report-section" wx:if="{{records.length > 0}}">
+      <view class="section-title">AI 分析报告</view>
+      <view class="ai-report-card">
+        <button class="ai-report-btn" bindtap="goToAIReport">我的消费画像</button>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="section empty-section" wx:if="{{hasNotebook && records.length === 0 && !asrText}}">
+      <view class="empty-illustration">📝</view>
+      <text class="empty-text">还没有记账记录</text>
+      <text class="empty-hint">按住上方按钮说："今天吃饭花了30块"</text>
+    </view>
+
+    <view style="height: 60rpx;"></view>
+  </scroll-view>
+
+  <!-- 文本输入弹窗 -->
+  <view class="text-modal-mask" wx:if="{{textInputVisible}}" catchtap="onTextInputCancel">
+    <view class="text-modal-card" catchtap="onModalStop">
+      <view class="text-modal-title">文本记账</view>
+      <textarea
+        class="text-modal-input"
+        placeholder="五道口买枣糕花了19.8，打车13.6，超市买水2块..."
+        placeholder-class="text-modal-placeholder"
+        value="{{textInputValue}}"
+        bindinput="onTextInputChange"
+        maxlength="200"
+        auto-height
+        adjust-position="{{true}}"
+      ></textarea>
+      <view class="text-modal-actions">
+        <view class="text-modal-btn text-modal-cancel" catchtap="onTextInputCancel">取消</view>
+        <view class="text-modal-btn text-modal-confirm" catchtap="onTextInputConfirm">确认</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑记录弹窗 -->
+  <view class="record-edit-mask" wx:if="{{recordEditVisible}}" catchtap="closeRecordEdit">
+    <view class="record-edit-card" catchtap="onModalStop">
+      <text class="record-edit-title">编辑记录</text>
+
+      <view class="edit-field">
+        <text class="edit-label">类型</text>
+        <view class="edit-type-tabs">
+          <view class="edit-type-tab {{recordEditType === 'expense' ? 'edit-type-expense' : ''}}" catchtap="onEditTypeChange" data-type="expense">支出</view>
+          <view class="edit-type-tab {{recordEditType === 'income' ? 'edit-type-income' : ''}}" catchtap="onEditTypeChange" data-type="income">收入</view>
+        </view>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">金额</text>
+        <input class="edit-input" type="digit" value="{{recordEditAmount}}" bindinput="onEditAmountInput" placeholder="0.00"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">分类</text>
+        <input class="edit-input" value="{{recordEditCategory}}" bindinput="onEditCategoryInput" placeholder="如：餐饮" maxlength="10"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">细类</text>
+        <input class="edit-input" value="{{recordEditSubCategory}}" bindinput="onEditSubCategoryInput" placeholder="如：午餐" maxlength="10"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">描述</text>
+        <input class="edit-input" value="{{recordEditDescription}}" bindinput="onEditDescriptionInput" placeholder="补充说明" maxlength="50"></input>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">时间</text>
+        <view class="edit-time-row">
+          <picker class="edit-picker" mode="date" value="{{recordEditDate}}" bindchange="onEditDateChange">
+            <view class="edit-picker-value">{{recordEditDate}}</view>
+          </picker>
+          <picker class="edit-picker" mode="time" value="{{recordEditTime}}" bindchange="onEditTimeChange">
+            <view class="edit-picker-value">{{recordEditTime}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="edit-field">
+        <text class="edit-label">地点</text>
+        <input class="edit-input" value="{{recordEditLocation}}" bindinput="onEditLocationInput" placeholder="可选" maxlength="50"></input>
+      </view>
+
+      <view class="edit-actions">
+        <view class="edit-cancel" catchtap="closeRecordEdit">取消</view>
+        <view class="edit-confirm" catchtap="confirmRecordEdit">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 导航抽屉 -->
+  <!-- 图片预览弹窗 -->
+  <view class="image-preview-mask" wx:if="{{imagePreviewVisible}}" catchtap="closeImagePreview">
+    <view class="image-preview-card" catchtap="onModalStop">
+      <view class="image-preview-actions">
+        <view class="image-preview-change" catchtap="onAddImage" data-id="{{imagePreviewId}}">换图</view>
+        <view class="image-preview-delete" catchtap="onDeleteImage" data-id="{{imagePreviewId}}">删除</view>
+      </view>
+      <image class="image-preview-img" src="{{imagePreviewUrl}}" mode="aspectFit" bindtap="onPreviewImage" data-url="{{imagePreviewUrl}}"></image>
+    </view>
+  </view>
+
+  <!-- 邀请加入确认弹窗 -->
+  <view class="invite-mask" wx:if="{{showInviteConfirm}}" catchtap="cancelJoin">
+    <view class="invite-card" catchtap="onModalStop">
+      <text class="invite-title">加入账本</text>
+      <view class="invite-content">
+        <text class="invite-name">{{inviteInfo.notebookName}}</text>
+        <text class="invite-inviter">{{inviteInfo.inviterNickName}} 邀请你一起记账</text>
+        <text class="invite-hint">加入后双方可以共同查看、添加记录</text>
+      </view>
+      <view class="invite-actions">
+        <view class="invite-cancel" catchtap="cancelJoin">取消</view>
+        <view class="invite-confirm" catchtap="confirmJoin">确认加入</view>
+      </view>
+    </view>
+  </view>
+
+  <nav-drawer
+    visible="{{drawerVisible}}"
+    currentPath="/pages/index/index"
+    bind:close="closeDrawer"
+    bind:navigate="onNavigate"
+  ></nav-drawer>
+</view>

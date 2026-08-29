@@ -12,7 +12,7 @@ App({
 
   onLaunch: function () {
     wx.cloud.init({
-      env: 'cloud1-d7g1myj7ab00b5661'
+      env: 'voiceledger-d9geyctov48e61f85'
     })
 
     // 计算导航栏尺寸

@@ -12,7 +12,7 @@ exports.main = async (event, context) => {
     return { success: true, apiKey: cachedApiKey }
   }
 
-  const fileID = 'cloud://cloud1-d7g1myj7ab00b5661.636c-cloud1-d7g1myj7ab00b5661-1466793040/config.json'
+  const fileID = 'cloud://voiceledger-d9geyctov48e61f85.636c-voiceledger-d9geyctov48e61f85-1466793040/config.json'
   console.log('[getConfig] 下载配置文件:', fileID)
 
   try {

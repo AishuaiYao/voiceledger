@@ -46,6 +46,13 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
+      <view class="menu-item" bind:tap="onSupportTap" hover-class="menu-item-hover">
+        <view class="menu-left">
+          <image class="menu-icon" src="/images/支持.png" mode="aspectFit"></image>
+          <text class="menu-text">赏一个</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
       <view class="menu-item">
         <text class="menu-text">版本号</text>
         <text class="menu-value">v1.0.0</text>
@@ -53,13 +60,6 @@
       <view class="menu-item">
         <text class="menu-text">关于我们</text>
         <text class="menu-value">voiceledger@163.com</text>
-      </view>
-      <view class="menu-item" bind:tap="onSupportTap" hover-class="menu-item-hover">
-        <view class="menu-left">
-          <image class="menu-icon" src="/images/支持.png" mode="aspectFit"></image>
-          <text class="menu-text">赏一个</text>
-        </view>
-        <text class="menu-arrow">›</text>
       </view>
     </view>
   </view>

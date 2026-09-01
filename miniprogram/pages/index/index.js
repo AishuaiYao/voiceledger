@@ -107,14 +107,12 @@ Page({
   processing: false,
 
   onLoad: function (options) {
-    // 初始化导航栏尺寸
-    var now = new Date()
-    var currentMonth = now.getFullYear() + '-' + (now.getMonth() + 1).toString().padStart(2, '0')
+    // 初始化导航栏尺寸；综合分析默认展示全部时间（整个账本所有成员的消费情况）
     this.setData(Object.assign(app.getNavBarLayout(), {
-      analysisMonth: currentMonth,
-      analysisLabel: currentMonth.replace('-', '年') + '月',
-      calendarMonth: currentMonth,
-      calendarLabel: currentMonth.replace('-', '年') + '月'
+      analysisMonth: '',
+      analysisLabel: '全部时间',
+      calendarMonth: '',
+      calendarLabel: ''
     }))
 
     this.recorderManager = wx.getRecorderManager()
@@ -877,6 +875,19 @@ Page({
   },
 
   updateStats: function (records) {
+    // 收支概览：按整个账本（所有成员、所有时间）全量统计，与 dateRange 展示范围一致
+    var totalIncome = 0
+    var totalExpense = 0
+    for (var i = 0; i < records.length; i++) {
+      var r0 = records[i]
+      if (r0.type === 'income') {
+        totalIncome += Number(r0.amount || 0)
+      } else {
+        totalExpense += Number(r0.amount || 0)
+      }
+    }
+
+    // 综合分析：按筛选时间范围（默认全部时间）统计分类
     var analysisRecords = records
     if (this.data.analysisMonth) {
       analysisRecords = records.filter(function (r) {
@@ -884,16 +895,13 @@ Page({
       }, this)
     }
 
-    var totalIncome = 0
-    var totalExpense = 0
+    var analysisExpense = 0
     var categoryMap = {}
 
-    for (var i = 0; i < analysisRecords.length; i++) {
-      var r = analysisRecords[i]
-      if (r.type === 'income') {
-        totalIncome += r.amount
-      } else {
-        totalExpense += r.amount
+    for (var j = 0; j < analysisRecords.length; j++) {
+      var r = analysisRecords[j]
+      if (r.type !== 'income') {
+        analysisExpense += r.amount
       }
 
       // 按大类聚合
@@ -952,8 +960,8 @@ Page({
       dateRange: dateRange
     })
 
-    // 生成饼状图数据（只展示筛选范围内的支出分类）
-    this.buildPieData(categoryStats, totalExpense)
+    // 生成饼状图数据（只展示筛选范围内的支出分类，百分比按筛选范围支出计算）
+    this.buildPieData(categoryStats, analysisExpense)
     this.updateCalendar(records)
   },
 

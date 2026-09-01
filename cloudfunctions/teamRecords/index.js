@@ -58,13 +58,31 @@ async function getRecords(openId, event) {
     total = countRes.total
   }
 
-  var q = db.collection('records').where(condition).orderBy('time', 'desc')
+  var res = null
   if (isPaged) {
+    var q = db.collection('records').where(condition).orderBy('time', 'desc')
     q = q.skip((page - 1) * pageSize).limit(pageSize)
+    res = await q.get()
   } else {
-    q = q.limit(500)
+    // 首页等依赖全量数据的调用：循环拉取全部记录，避免单次 limit 截断导致统计缺失
+    var all = []
+    var batchSize = 1000
+    var offset = 0
+    var MAX_ALL = 20000
+    while (true) {
+      var batch = await db.collection('records')
+        .where(condition)
+        .orderBy('time', 'desc')
+        .skip(offset)
+        .limit(batchSize)
+        .get()
+      all = all.concat(batch.data)
+      if (batch.data.length < batchSize) break
+      offset += batchSize
+      if (all.length >= MAX_ALL) break // 安全上限，防止异常数据导致死循环
+    }
+    res = { data: all }
   }
-  var res = await q.get()
 
   var stats = null
   if (isPaged) {

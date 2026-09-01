@@ -26,13 +26,59 @@ Page({
       wx.showToast({ title: '头像已失效，请重新设置', icon: 'none' })
     }
 
-    // 未登录且未显示注册表单时，自动弹窗
-    if (!userInfo && !this.data.showRegister) {
-      var that = this
-      setTimeout(function () {
+    // 已登录则无需处理
+    if (userInfo) return
+
+    // 未登录：只展示「未登录」界面，等用户点击「微信一键登录」后再静默登录，不自动登录
+    this.setData({ showRegister: false })
+  },
+
+  // 实时检测是否老用户：已注册则直接登录，未注册则弹出完善资料表单
+  autoLogin: function () {
+    var that = this
+    if (this._autoLoginInProgress) return
+    this._autoLoginInProgress = true
+
+    wx.cloud.callFunction({
+      name: 'getOpenId',
+      success: function (res) {
+        that._autoLoginInProgress = false
+        if (!res.result || !res.result.openId) {
+          that.setData({ showRegister: true })
+          return
+        }
+        var existing = res.result.existingUser
+        if (existing && existing.nickName) {
+          // 已有注册记录，直接登录
+          wx.setStorageSync('precheckUser', existing)
+          that.doLogin(existing)
+        } else {
+          wx.removeStorageSync('precheckUser')
+          // 未注册过，弹出完善资料表单
+          that.setData({ showRegister: true })
+        }
+      },
+      fail: function () {
+        that._autoLoginInProgress = false
         that.setData({ showRegister: true })
-      }, 400)
+      }
+    })
+  },
+
+  // 用已有用户资料直接登录（老用户免选头像昵称）
+  doLogin: function (existing) {
+    var that = this
+    var userInfo = {
+      _id: existing._id,
+      openId: existing.openId,
+      nickName: existing.nickName,
+      avatarUrl: existing.avatarUrl || ''
     }
+    wx.removeStorageSync('manualLogout')
+    app.setUserInfo(userInfo)
+    that.setData({ userInfo: userInfo, showRegister: false })
+    that.notifyLoginSuccess()
+    wx.showToast({ title: '欢迎回来，' + existing.nickName, icon: 'none' })
   },
 
   // ========== 导航抽屉 ==========
@@ -54,7 +100,15 @@ Page({
   // ========== 登录注册 ==========
 
   showLoginPopup: function () {
-    this.setData({ showRegister: true })
+    // 用户主动点登录：清除手动退出标记
+    wx.removeStorageSync('manualLogout')
+    // 若后台预检已缓存老用户资料，直接秒登；否则实时检测
+    var cached = wx.getStorageSync('precheckUser')
+    if (cached && cached.openId && cached.nickName) {
+      this.doLogin(cached)
+    } else {
+      this.autoLogin()
+    }
   },
 
   closeRegister: function () {
@@ -261,6 +315,11 @@ Page({
 
   // 登录成功后触发邀请流程回调，并自动恢复最近使用的账本
   notifyLoginSuccess: function () {
+    // 任何方式登录成功都视为已清除手动退出状态
+    wx.removeStorageSync('manualLogout')
+    // 同步最新用户资料到预检缓存，下次点「一键登录」可秒登
+    var ui = app.getUserInfo()
+    if (ui) wx.setStorageSync('precheckUser', ui)
     // 有历史账本时自动选中最近使用的账本，新用户无账本则不设置（保持提示创建账本）
     app.ensureRecentNotebook()
     if (typeof app.globalData.onLoginSuccess === 'function') {
@@ -291,6 +350,8 @@ Page({
       success: function (res) {
         if (res.confirm) {
           app.setUserInfo(null)
+          // 标记手动退出：避免下次进入页面又被静默自动登录
+          wx.setStorageSync('manualLogout', true)
           that.setData({
             userInfo: null,
             showRegister: false,

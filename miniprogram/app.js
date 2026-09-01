@@ -23,6 +23,31 @@ App({
 
     // 加载当前账本
     this.loadCurrentNotebook()
+
+    // 未登录时后台预检是否老用户，点击「微信一键登录」时免等待直接秒登
+    if (!this.globalData.userInfo) {
+      this.precheckExistingUser()
+    }
+  },
+
+  // 后台预检：重装/清缓存后提前检测该 openId 是否已注册，缓存检测结果以减少点「一键登录」的等待
+  precheckExistingUser: function () {
+    var that = this
+    if (wx.getStorageSync('manualLogout')) return
+    wx.cloud.callFunction({
+      name: 'getOpenId',
+      success: function (res) {
+        var existing = res.result && res.result.existingUser
+        if (existing && existing.nickName) {
+          wx.setStorageSync('precheckUser', existing)
+        } else {
+          wx.removeStorageSync('precheckUser')
+        }
+      },
+      fail: function (err) {
+        console.error('[app] 老用户预检失败:', err)
+      }
+    })
   },
 
   // ========== 导航栏尺寸 ==========

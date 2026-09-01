@@ -301,5 +301,15 @@ Page({
         }
       }
     })
+  },
+
+  // ========== 分享 ==========
+
+  onShareAppMessage: function () {
+    return { title: '智能语音记账', path: '/pages/account/account' }
+  },
+
+  onShareTimeline: function () {
+    return { title: '智能语音记账' }
   }
 })

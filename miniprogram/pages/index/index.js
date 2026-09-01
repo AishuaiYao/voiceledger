@@ -1760,5 +1760,20 @@ Page({
         })
       }
     })
+  },
+
+  // ========== 分享 ==========
+
+  onShareAppMessage: function () {
+    var name = this.data.currentNotebookName
+    return {
+      title: name ? '智能语音记账 · ' + name : '智能语音记账',
+      path: '/pages/index/index'
+    }
+  },
+
+  onShareTimeline: function () {
+    var name = this.data.currentNotebookName
+    return { title: name ? '智能语音记账 · ' + name : '智能语音记账' }
   }
 })

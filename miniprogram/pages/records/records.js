@@ -628,5 +628,17 @@ Page({
       expenseCount: expenseCount,
       incomeCount: incomeCount
     })
+  },
+
+  // ========== 分享 ==========
+
+  onShareAppMessage: function () {
+    var title = this.data.title || '智能语音记账 · 记账明细'
+    return { title: title, path: '/pages/records/records' }
+  },
+
+  onShareTimeline: function () {
+    var title = this.data.title || '智能语音记账 · 记账明细'
+    return { title: title }
   }
 })

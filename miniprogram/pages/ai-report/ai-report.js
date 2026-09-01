@@ -264,5 +264,18 @@ Page({
       sections.push({ no: '', text: text.trim() })
     }
     return sections
+  },
+
+  // ========== 分享 ==========
+
+  onShareAppMessage: function () {
+    return {
+      title: this.data.portraitTitle || '我的消费画像 · 智能语音记账',
+      path: '/pages/ai-report/ai-report'
+    }
+  },
+
+  onShareTimeline: function () {
+    return { title: this.data.portraitTitle || '我的消费画像 · 智能语音记账' }
   }
 })

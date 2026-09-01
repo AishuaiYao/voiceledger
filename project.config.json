@@ -4,6 +4,7 @@
   "projectname": "miniapp-e2e-test",
   "appid": "wxeefe877d4f309d8c",
   "compileType": "miniprogram",
+  "version": "1.0.0",
   "libVersion": "3.9.0",
   "setting": {
     "es6": true,

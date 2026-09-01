@@ -213,7 +213,7 @@
 
       <!-- 每日消费 -->
       <view class="section daily-section" wx:if="{{calendarDays.length > 0 || monthlyHeat.length > 0}}">
-        <view class="analysis-subtitle">每日消费</view>
+        <view class="analysis-subtitle">{{analysisMonth ? '每日消费' : '每月消费'}}</view>
         <view class="daily-card">
           <!-- 选择具体月份：当月每日热力图 -->
           <block wx:if="{{analysisMonth}}">

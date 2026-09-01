@@ -25,6 +25,7 @@
     </view>
     <text class="account-name">{{userInfo.nickName || '用户'}}</text>
     <text class="account-phone hint">已登录</text>
+    <view class="account-edit" bind:tap="openEditProfile">编辑资料</view>
   </view>
 
   <!-- 未登录：显示登录入口 -->
@@ -48,8 +49,8 @@
       </view>
       <view class="menu-item" bind:tap="onSupportTap" hover-class="menu-item-hover">
         <view class="menu-left">
-          <image class="menu-icon" src="/images/支持.png" mode="aspectFit"></image>
           <text class="menu-text">赏一个</text>
+          <image class="menu-icon" src="/images/支持.png" mode="aspectFit"></image>
         </view>
         <text class="menu-arrow">›</text>
       </view>
@@ -72,8 +73,8 @@
   <!-- 注册弹窗 -->
   <view class="register-mask" wx:if="{{showRegister}}" catchtouchmove="{{true}}">
     <view class="register-popup">
-      <text class="register-title">完善账号信息</text>
-      <text class="register-desc">设置头像和昵称，开始智能记账</text>
+      <text class="register-title">{{editMode ? '修改资料' : '完善账号信息'}}</text>
+      <text class="register-desc">{{editMode ? '修改后，历史账单记录中的昵称和头像会同步更新' : '设置头像和昵称，开始智能记账'}}</text>
 
       <!-- 头像选择 -->
       <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
@@ -101,10 +102,10 @@
         disabled="{{submitting}}"
         loading="{{submitting}}"
       >
-        {{submitting ? '登录中...' : '完成登录'}}
+        {{submitting ? (editMode ? '保存中...' : '登录中...') : (editMode ? '保存修改' : '完成登录')}}
       </button>
 
-      <view class="register-skip" bind:tap="closeRegister">暂不登录</view>
+      <view class="register-skip" bind:tap="closeRegister">{{editMode ? '取消' : '暂不登录'}}</view>
     </view>
   </view>
 

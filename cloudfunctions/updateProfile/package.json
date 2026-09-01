@@ -1,0 +1,9 @@
+{
+  "name": "updateProfile",
+  "version": "1.0.0",
+  "description": "修改用户头像昵称并同步历史账单记录等快照数据",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

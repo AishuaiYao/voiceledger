@@ -5,6 +5,7 @@ Page({
     drawerVisible: false,
     userInfo: null,
     showRegister: false,
+    editMode: false,
     avatarUrl: '',
     nickName: '',
     submitting: false,
@@ -112,7 +113,7 @@ Page({
   },
 
   closeRegister: function () {
-    this.setData({ showRegister: false })
+    this.setData({ showRegister: false, editMode: false, avatarUrl: '', nickName: '' })
   },
 
   onChooseAvatar: function (e) {
@@ -126,6 +127,13 @@ Page({
 
   handleRegister: function () {
     var that = this
+
+    // 已登录：进入「修改资料」模式
+    if (this.data.editMode) {
+      this.handleEditProfile()
+      return
+    }
+
     var nickName = this.data.nickName
     var avatarUrl = this.data.avatarUrl
 
@@ -168,6 +176,77 @@ Page({
         that.setData({ submitting: false })
       }
     })
+  },
+
+  // 打开「修改资料」弹窗（已登录），预填当前昵称头像
+  openEditProfile: function () {
+    var userInfo = this.data.userInfo || {}
+    this.setData({
+      editMode: true,
+      showRegister: true,
+      avatarUrl: userInfo.avatarUrl || '',
+      nickName: userInfo.nickName || ''
+    })
+  },
+
+  // 已登录用户修改头像昵称：更新 users 主记录，并同步历史账单记录、账本成员等展示数据
+  handleEditProfile: function () {
+    var that = this
+    var nickName = this.data.nickName
+    var avatarUrl = this.data.avatarUrl
+    var oldUserInfo = this.data.userInfo || {}
+
+    if (!nickName || !nickName.trim()) {
+      wx.showToast({ title: '请输入昵称', icon: 'none' })
+      return
+    }
+    if (nickName.trim() === (oldUserInfo.nickName || '') && (avatarUrl || '') === (oldUserInfo.avatarUrl || '')) {
+      wx.showToast({ title: '资料没有变化', icon: 'none' })
+      return
+    }
+
+    this.setData({ submitting: true })
+
+    var finish = function (finalAvatarUrl) {
+      wx.cloud.callFunction({
+        name: 'updateProfile',
+        data: { nickName: nickName.trim(), avatarUrl: finalAvatarUrl || '' },
+        success: function (res) {
+          that.setData({ submitting: false })
+          var r = res.result || {}
+          if (!r.success) {
+            wx.showToast({ title: r.error || '保存失败，请重试', icon: 'none' })
+            return
+          }
+          var newInfo = r.user
+          app.setUserInfo(newInfo)
+          wx.setStorageSync('precheckUser', newInfo)
+          that.setData({
+            userInfo: newInfo,
+            showRegister: false,
+            editMode: false,
+            avatarUrl: '',
+            nickName: ''
+          })
+          wx.showToast({ title: '资料已更新', icon: 'success' })
+        },
+        fail: function (err) {
+          console.error('[account] updateProfile 失败:', err)
+          that.setData({ submitting: false })
+          wx.showToast({ title: '保存失败，请检查网络', icon: 'none' })
+        }
+      })
+    }
+
+    // 换了本地新头像（wxfile://、http://tmp）：先上传云存储拿 fileID，再提交
+    if (avatarUrl && avatarUrl.indexOf('cloud://') !== 0 && avatarUrl !== (oldUserInfo.avatarUrl || '')) {
+      this.uploadAvatar(oldUserInfo.openId || '', avatarUrl, function (fileID) {
+        // 上传失败时保留旧头像，不让头像被意外清空
+        finish(fileID || oldUserInfo.avatarUrl || '')
+      })
+    } else {
+      finish(avatarUrl || oldUserInfo.avatarUrl || '')
+    }
   },
 
   // 上传头像到云存储，返回 cloud:// fileID，可跨设备长期有效

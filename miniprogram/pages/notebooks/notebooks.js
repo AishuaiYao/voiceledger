@@ -294,7 +294,15 @@ Page({
           wx.showToast({ title: result ? result.error : '加载失败', icon: 'none' })
           return
         }
-        that.setData({ showMembers: true, memberNotebook: result.notebook })
+        // 云函数已把 cloud:// 头像转成临时链接；仍以 cloud:// 开头说明转换失败，置空回退文字头像
+        var nb = result.notebook
+        var ms = nb.members || []
+        for (var i = 0; i < ms.length; i++) {
+          if (ms[i].avatarUrl && ms[i].avatarUrl.indexOf('cloud://') === 0) {
+            ms[i].avatarUrl = ''
+          }
+        }
+        that.setData({ showMembers: true, memberNotebook: nb })
       },
       fail: function (err) {
         console.error('[成员] 加载失败:', err)

@@ -4,6 +4,17 @@ function round3(n) {
   return Math.round(n * 1000) / 1000
 }
 
+// 成员加入时间格式化
+function formatJoinedDate(ts) {
+  if (!ts) return ''
+  var d = new Date(ts)
+  if (isNaN(d.getTime())) return ''
+  var y = d.getFullYear()
+  var mo = (d.getMonth() + 1).toString().padStart(2, '0')
+  var day = d.getDate().toString().padStart(2, '0')
+  return y + '-' + mo + '-' + day
+}
+
 // 首页数据本地缓存 key（按账本隔离），用于冷启动/重新进入时秒开
 var HOME_CACHE_PREFIX = 'homeCache_'
 function homeCacheKey(notebookId) {
@@ -70,6 +81,11 @@ Page({
     inviteId: '',
     inviteInfo: null,
     showInviteConfirm: false,
+
+    // 团队成员弹窗
+    showMembers: false,
+    members: [],
+    myOpenId: '',
 
     // 文本输入弹窗
     textInputVisible: false,
@@ -316,6 +332,88 @@ Page({
         that.setData({ currentNotebookIcon: '', currentNotebookIsTeam: false })
       }
     })
+  },
+
+  // ========== 团队成员弹窗 ==========
+
+  onShowMembers: function () {
+    var that = this
+    if (!this.data.currentNotebookIsTeam) return
+    var notebookId = this.data.currentNotebookId
+    if (!notebookId) return
+    var userInfo = app.getUserInfo()
+    var myOpenId = (userInfo && userInfo.openId) || ''
+    that.setData({ showMembers: true, members: [], myOpenId: myOpenId })
+    wx.cloud.callFunction({
+      name: 'team',
+      data: { action: 'getNotebookDetail', notebookId: notebookId },
+      success: function (cfRes) {
+        var result = cfRes.result
+        if (!result || !result.success) {
+          wx.showToast({ title: result ? result.error : '加载失败', icon: 'none' })
+          return
+        }
+        var members = (result.notebook && result.notebook.members) || []
+        var list = []
+        var fileIDs = []
+        for (var i = 0; i < members.length; i++) {
+          var m = members[i]
+          var nick = m.nickName || '微信用户'
+          var avatarUrl = m.avatarUrl || ''
+          list.push({
+            openId: m.openId,
+            nickName: nick,
+            nickNameText: nick.charAt(0),
+            avatarUrl: avatarUrl,
+            isOwner: !!m.isOwner,
+            joinedDate: formatJoinedDate(m.joinedAt)
+          })
+          // 云函数未转换成功的 cloud:// 头像，前端兜底再转一次
+          if (avatarUrl.indexOf('cloud://') === 0) {
+            fileIDs.push(avatarUrl)
+          }
+        }
+        if (fileIDs.length === 0) {
+          that.setData({ members: list })
+          return
+        }
+        wx.cloud.getTempFileURL({
+          fileList: fileIDs,
+          success: function (urlRes) {
+            var urlMap = {}
+            var fl = urlRes.fileList || []
+            for (var k = 0; k < fl.length; k++) {
+              urlMap[fl[k].fileID] = fl[k].tempFileURL
+            }
+            for (var n = 0; n < list.length; n++) {
+              if (urlMap[list[n].avatarUrl]) {
+                list[n].avatarUrl = urlMap[list[n].avatarUrl]
+              } else if (list[n].avatarUrl.indexOf('cloud://') === 0) {
+                list[n].avatarUrl = ''
+              }
+            }
+            that.setData({ members: list })
+          },
+          fail: function () {
+            // 转换失败则置空头像，回退为昵称首字占位
+            for (var n = 0; n < list.length; n++) {
+              if (list[n].avatarUrl.indexOf('cloud://') === 0) {
+                list[n].avatarUrl = ''
+              }
+            }
+            that.setData({ members: list })
+          }
+        })
+      },
+      fail: function (err) {
+        console.error('[成员] 加载失败:', err)
+        wx.showToast({ title: '加载失败', icon: 'none' })
+      }
+    })
+  },
+
+  closeMembers: function () {
+    this.setData({ showMembers: false, members: [] })
   },
 
   checkRecordAuth: function () {

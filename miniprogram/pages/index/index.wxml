@@ -21,8 +21,8 @@
       <image wx:if="{{currentNotebookIcon}}" class="notebook-bar-icon" src="{{currentNotebookIcon}}" mode="aspectFit"></image>
       <text wx:else class="notebook-bar-icon">📒</text>
       <text class="notebook-bar-name">{{currentNotebookName}}</text>
-      <text class="notebook-type-icon">{{currentNotebookIsTeam ? '👥' : '👤'}}</text>
-      <view class="notebook-team-badge" wx:if="{{currentNotebookIsTeam}}">多人 · {{currentNotebookMemberCount}}人</view>
+      <text class="notebook-type-icon" catchtap="onShowMembers">{{currentNotebookIsTeam ? '👥' : '👤'}}</text>
+      <view class="notebook-team-badge" wx:if="{{currentNotebookIsTeam}}" catchtap="onShowMembers">多人 · {{currentNotebookMemberCount}}人</view>
       <view class="notebook-solo-badge" wx:else>个人</view>
       <text class="notebook-bar-change" bind:tap="goToNotebooks">切换</text>
     </view>
@@ -367,6 +367,31 @@
       <view class="invite-actions">
         <view class="invite-cancel" catchtap="cancelJoin">取消</view>
         <view class="invite-confirm" catchtap="confirmJoin">确认加入</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 团队成员弹窗 -->
+  <view class="invite-mask" wx:if="{{showMembers}}" catchtap="closeMembers">
+    <view class="invite-card" catchtap="onModalStop">
+      <text class="invite-title">团队成员</text>
+      <text class="member-count">{{currentNotebookName}} · {{members.length}}人</text>
+      <scroll-view scroll-y class="member-list">
+        <view class="member-item" wx:for="{{members}}" wx:key="openId">
+          <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill"></image>
+          <view wx:else class="member-avatar member-avatar-text">{{item.nickNameText}}</view>
+          <view class="member-info">
+            <view class="member-name-row">
+              <text class="member-name">{{item.nickName}}</text>
+              <text class="member-tag" wx:if="{{item.isOwner}}">创建者</text>
+              <text class="member-tag member-tag-me" wx:if="{{item.openId === myOpenId}}">我</text>
+            </view>
+            <text class="member-joined" wx:if="{{item.joinedDate}}">加入于 {{item.joinedDate}}</text>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="member-actions">
+        <view class="member-close-btn" catchtap="closeMembers">关闭</view>
       </view>
     </view>
   </view>

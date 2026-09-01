@@ -105,8 +105,67 @@ async function getNotebookDetail(openId, event) {
   var nb = await getNotebookDoc(event.notebookId)
   if (!nb) return { success: false, error: '账本不存在' }
   if (!isMember(nb, openId)) return { success: false, error: '无权访问' }
+  await mergeMemberProfiles(nb)   // 按 openId 从 users 集合拉最新昵称/头像，覆盖过期的 members 资料
+  await resolveMemberAvatars(nb)  // cloud:// 头像批量转临时 https 链接
   decorateNotebook(nb, openId)
   return { success: true, notebook: nb }
+}
+
+// 按 openId 从 users 集合批量拉取最新昵称/头像，覆盖 members 中缺失或过期的资料
+async function mergeMemberProfiles(notebook) {
+  if (!notebook.members || notebook.members.length === 0) return
+  var openIds = []
+  var seen = {}
+  for (var i = 0; i < notebook.members.length; i++) {
+    var oid = notebook.members[i].openId
+    if (oid && !seen[oid]) {
+      seen[oid] = true
+      openIds.push(oid)
+    }
+  }
+  if (openIds.length === 0) return
+  var res = await db.collection('users').where({ openId: _.in(openIds) }).get()
+  var userMap = {}
+  for (var j = 0; j < res.data.length; j++) {
+    userMap[res.data[j].openId] = res.data[j]
+  }
+  for (var k = 0; k < notebook.members.length; k++) {
+    var u = userMap[notebook.members[k].openId]
+    if (!u) continue
+    if (u.avatarUrl) notebook.members[k].avatarUrl = u.avatarUrl
+    if (u.nickName) notebook.members[k].nickName = u.nickName
+  }
+}
+
+// 把成员头像 cloud:// 文件 ID 批量转成临时 https 链接，前端 image 可直接渲染
+async function resolveMemberAvatars(notebook) {
+  if (!notebook.members || notebook.members.length === 0) return
+  var fileIDs = []
+  for (var i = 0; i < notebook.members.length; i++) {
+    var av = notebook.members[i].avatarUrl
+    if (av && av.indexOf('cloud://') === 0) fileIDs.push(av)
+  }
+  if (fileIDs.length === 0) return
+  try {
+    var urlRes = await cloud.getTempFileURL({ fileList: fileIDs })
+    var urlMap = {}
+    var fl = urlRes.fileList || []
+    for (var j = 0; j < fl.length; j++) {
+      if (fl[j].tempFileURL) urlMap[fl[j].fileID] = fl[j].tempFileURL
+      if (fl[j].status && fl[j].status !== 0) {
+        console.warn('[team] 头像转换失败:', fl[j].fileID, fl[j].errMsg || fl[j].status)
+      }
+    }
+    for (var k = 0; k < notebook.members.length; k++) {
+      var av = notebook.members[k].avatarUrl
+      if (av && av.indexOf('cloud://') === 0) {
+        // 转换成功用临时链接；失败置空，前端回退文字头像，绝不回传 cloud://
+        notebook.members[k].avatarUrl = urlMap[av] || ''
+      }
+    }
+  } catch (e) {
+    console.error('[team] 成员头像转换失败:', e)
+  }
 }
 
 // ========== 邀请 ==========

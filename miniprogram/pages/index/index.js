@@ -1980,6 +1980,14 @@ Page({
   },
 
   // 点击每日消费日历中的某一天，跳转到当天的记录页
+  // 点击日历左上角月份：进入整个月的消费明细
+  onCalendarMonthTap: function () {
+    var month = this.data.analysisMonth
+    if (!month) return
+    app.tagFilterData = this.buildTagFilterData('date', month)
+    wx.navigateTo({ url: '/pages/records/records' })
+  },
+
   onCalendarDayTap: function (e) {
     var ds = e.currentTarget.dataset
     if (ds.empty) return

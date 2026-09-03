@@ -228,7 +228,7 @@
           <block wx:if="{{analysisMonth}}">
             <view class="calendar-header">
               <view class="calendar-month-wrap">
-                <text class="calendar-month">{{calendarLabel}}</text>
+                <text class="calendar-month" bindtap="onCalendarMonthTap">{{calendarLabel}}<text class="calendar-month-arrow">›</text></text>
                 <view class="cal-menu-btn" wx:if="{{analysisMonth}}" catchtap="onCalendarMenuTap">⋮</view>
               </view>
               <text class="calendar-month-total">支出 ¥{{dailyExpenseTotal}}</text>

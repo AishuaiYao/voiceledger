@@ -2,6 +2,19 @@
   <view class="bg-gradient"></view>
 
   <scroll-view scroll-y class="content-scroll" bindscrolltolower="onLoadMore" lower-threshold="200">
+    <!-- 分享只读浏览横幅：让别人知道这是谁的什么账本 -->
+    <view class="share-banner" wx:if="{{sharedView && !viewerIsMember && !loading}}">
+      <image wx:if="{{notebookOwnerAvatar}}" class="share-banner-avatar" src="{{notebookOwnerAvatar}}" mode="aspectFill"></image>
+      <view class="share-banner-info">
+        <view class="share-banner-title">
+          <text class="share-banner-owner">{{notebookOwnerName || '账本主人'}}</text>
+          <text class="share-banner-of">的账本</text>
+        </view>
+        <view class="share-banner-sub" wx:if="{{notebookName}}">「{{notebookName}}」 · 以下为分享内容</view>
+      </view>
+      <view class="share-banner-tag">只读</view>
+    </view>
+
     <!-- 概览 -->
     <view class="section stats-section" wx:if="{{records.length > 0}}">
       <view class="stats-cards">
@@ -28,14 +41,8 @@
           <text class="list-count">共 {{recordCount}} 条 · 支出 {{expenseCount}} · 收入 {{incomeCount}}</text>
         </view>
         <view class="list-header-right">
-          <!-- 组队模式：按成员筛选（默认全部成员） -->
-          <picker wx:if="{{notebookIsTeam && memberOptions.length > 0}}" mode="selector" range="{{memberOptions}}" range-key="nickName" value="{{memberFilterIndex}}" bindchange="onMemberFilterChange">
-            <view class="member-filter-btn">
-              <text class="member-filter-label">{{memberFilterLabel}}</text>
-              <text class="member-filter-arrow">▾</text>
-            </view>
-          </picker>
-          <view class="day-menu-btn" wx:if="{{filterType === 'date'}}" catchtap="onDayMenuTap">⋮</view>
+          <!-- 右上角「更多」菜单入口（分享 / 选择成员 / 按范围删除） -->
+          <view class="day-menu-btn" catchtap="onMoreMenuTap">⋮</view>
         </view>
       </view>
       <view class="record-list">
@@ -48,8 +55,8 @@
             <view class="record-info">
               <view class="record-cat-row">
                 <view class="record-cat">{{item.category}}{{item.subCategory ? ' · ' + item.subCategory : ''}}</view>
-                <view class="record-image-btn" catchtap="onImageBtnTap" data-id="{{item._id}}" data-url="{{item.imageUrl}}" data-has="{{item.imageFileID ? '1' : ''}}">{{item.imageFileID ? '有图' : '配图'}}</view>
-                <view class="record-edit-btn" catchtap="onEditRecord" data-id="{{item._id}}">编辑</view>
+                <view class="record-image-btn" wx:if="{{item.imageFileID || viewerIsMember}}" catchtap="onImageBtnTap" data-id="{{item._id}}" data-url="{{item.imageUrl}}" data-has="{{item.imageFileID ? '1' : ''}}">{{item.imageFileID ? '有图' : '配图'}}</view>
+                <view class="record-edit-btn" wx:if="{{viewerIsMember}}" catchtap="onEditRecord" data-id="{{item._id}}">编辑</view>
               </view>
               <view class="record-desc">{{item.description}}</view>
               <view class="record-from" wx:if="{{item.creatorNickName}}">来自 {{item.creatorNickName}}</view>
@@ -68,7 +75,7 @@
             <text class="record-amount {{item.type === 'income' ? 'text-income' : 'text-expense'}}">
               {{item.type === 'income' ? '+' : '-'}}¥{{item.amount}}
             </text>
-            <view class="record-del" catchtap="onDeleteRecord" data-id="{{item._id}}">✕</view>
+            <view class="record-del" wx:if="{{viewerIsMember}}" catchtap="onDeleteRecord" data-id="{{item._id}}">✕</view>
           </view>
         </view>
       </view>
@@ -97,7 +104,7 @@
   </scroll-view>
 
   <!-- 编辑记录弹窗 -->
-  <view class="record-edit-mask" wx:if="{{recordEditVisible}}" catchtap="closeRecordEdit">
+  <view class="record-edit-mask" wx:if="{{recordEditVisible && viewerIsMember}}" catchtap="closeRecordEdit">
     <view class="record-edit-card" catchtap="onModalStop">
       <text class="record-edit-title">编辑记录</text>
 
@@ -156,11 +163,39 @@
   <!-- 图片预览弹窗 -->
   <view class="image-preview-mask" wx:if="{{imagePreviewVisible}}" catchtap="closeImagePreview">
     <view class="image-preview-card" catchtap="onModalStop">
-      <view class="image-preview-actions">
+      <view class="image-preview-actions" wx:if="{{viewerIsMember}}">
         <view class="image-preview-change" catchtap="onAddImage" data-id="{{imagePreviewId}}">换图</view>
         <view class="image-preview-delete" catchtap="onDeleteImage" data-id="{{imagePreviewId}}">删除</view>
       </view>
       <image class="image-preview-img" src="{{imagePreviewUrl}}" mode="aspectFit" bindtap="onPreviewImage" data-url="{{imagePreviewUrl}}"></image>
+    </view>
+  </view>
+
+  <!-- 右上角「更多」菜单：分享 / 选择成员（组队）/ 删除当天·当月（仅按日期进入，防误删全部） -->
+  <view class="more-sheet-mask" wx:if="{{moreMenuVisible}}" catchtap="closeMoreMenu">
+    <view class="more-sheet" catchtap="onModalStop">
+      <text class="more-sheet-title">更多操作</text>
+      <button class="more-sheet-item" open-type="share">分享</button>
+      <view class="more-sheet-item" wx:if="{{notebookIsTeam && memberOptions.length > 0}}" bindtap="onOpenMemberSelect">
+        <text>选择成员</text>
+        <text class="more-sheet-current">{{memberFilterLabel}}</text>
+      </view>
+      <view class="more-sheet-item more-sheet-danger" wx:if="{{filterType === 'date' && viewerIsMember}}" bindtap="onMoreDeleteTap">{{filterValue.length === 7 ? '删除当月记录' : '删除当天记录'}}</view>
+      <view class="more-sheet-cancel" bindtap="closeMoreMenu">取消</view>
+    </view>
+  </view>
+
+  <!-- 选择成员弹层：仅组队账本可进（首项 = 全部成员） -->
+  <view class="more-sheet-mask" wx:if="{{memberSelectVisible}}" catchtap="closeMemberSelect">
+    <view class="more-sheet" catchtap="onModalStop">
+      <text class="more-sheet-title">筛选成员</text>
+      <view class="member-select-list">
+        <view class="more-sheet-item {{index === memberFilterIndex ? 'more-sheet-active' : ''}}" wx:for="{{memberOptions}}" wx:key="openId" bindtap="onMemberSelectTap" data-index="{{index}}">
+          <text>{{item.nickName}}</text>
+          <text class="more-sheet-check" wx:if="{{index === memberFilterIndex}}">✓</text>
+        </view>
+      </view>
+      <view class="more-sheet-cancel" bindtap="closeMemberSelect">取消</view>
     </view>
   </view>
 </view>

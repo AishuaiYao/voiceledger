@@ -28,6 +28,7 @@ exports.main = async (event, context) => {
   if (action === 'deleteByDate') return deleteByDate(OPENID, event)
   if (action === 'deleteByMonth') return deleteByMonth(OPENID, event)
   if (action === 'updateImage') return updateImage(OPENID, event)
+  if (action === 'getImageUrls') return getImageUrls(OPENID, event)
 
   return { success: false, error: '未知 action: ' + action }
 }
@@ -35,16 +36,28 @@ exports.main = async (event, context) => {
 async function getRecords(openId, event) {
   var nb = await getNotebookDoc(event.notebookId)
   if (!nb) return { success: false, error: '账本不存在' }
-  if (!isMember(nb, openId)) return { success: false, error: '无权访问' }
+
+  // 只读分享通道：分享者(shareOpenId)须为账本成员，允许非成员仅按分享范围浏览
+  var viewerIsMember = isMember(nb, openId)
+  var shareOpenId = typeof event.shareOpenId === 'string' ? event.shareOpenId : ''
+  if (!viewerIsMember && !(shareOpenId && isMember(nb, shareOpenId))) {
+    return { success: false, error: '无权访问' }
+  }
 
   var condition = { notebookId: event.notebookId }
-  if (event.date && /^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
+  if (event.date && /^\d{4}-\d{2}$/.test(event.date)) {
+    // 整月范围：YYYY-MM（如从首页点击日历月份进入整月明细）
+    var mParts = event.date.split('-')
+    var mLastDay = new Date(Number(mParts[0]), Number(mParts[1]), 0).getDate()
+    condition.time = _.gte(event.date + '-01 00:00').and(_.lte(event.date + '-' + String(mLastDay).padStart(2, '0') + ' 23:59'))
+  } else if (event.date && /^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
     condition.time = _.gte(event.date + ' 00:00').and(_.lte(event.date + ' 23:59'))
   } else if (event.location) {
     condition.location = event.location
   }
   // 按成员筛选：只看指定成员创建的记录（不传/空串=全部成员），分页与统计共用该条件
-  if (event.memberOpenId) {
+  // 分享只读链接固定为「全部成员」视图，不随访客携带的成员参数变化
+  if (event.memberOpenId && viewerIsMember) {
     condition.openId = event.memberOpenId
   }
 
@@ -94,6 +107,7 @@ async function getRecords(openId, event) {
     stats = await getRecordStats(condition)
   }
 
+  var brief = await getNotebookBrief(nb)
   return {
     success: true,
     recordsVersion: Number(nb.recordsVersion) || 0,
@@ -102,7 +116,64 @@ async function getRecords(openId, event) {
     page: page,
     pageSize: pageSize,
     hasMore: isPaged ? page * pageSize < total : false,
-    stats: stats
+    stats: stats,
+    // 展示用账本概要（谁分享的账本），viewerIsMember 供前端切换读写/只读模式
+    notebookInfo: {
+      name: nb.name || '',
+      ownerNickName: brief.ownerNickName,
+      ownerAvatarUrl: brief.ownerAvatarUrl
+    },
+    viewerIsMember: viewerIsMember
+  }
+}
+
+// 从 users 集合取成员最新昵称/头像，供账本概要展示（页面头部横幅用）
+async function getNotebookBrief(nb) {
+  var members = nb.members || []
+  var owner = null
+  for (var i = 0; i < members.length; i++) {
+    if (members[i].isOwner) { owner = members[i]; break }
+  }
+  if (!owner && members.length > 0) owner = members[0]
+  if (!owner) return { ownerNickName: '', ownerAvatarUrl: '' }
+  try {
+    var res = await db.collection('users').where({ openId: owner.openId }).limit(1).get()
+    if (res.data.length > 0) {
+      owner = {
+        nickName: res.data[0].nickName || owner.nickName,
+        avatarUrl: res.data[0].avatarUrl || owner.avatarUrl
+      }
+    }
+  } catch (e) {
+    // 用户资料读取失败时回落成员资料
+  }
+  return {
+    ownerNickName: owner.nickName || '微信用户',
+    ownerAvatarUrl: owner.avatarUrl || ''
+  }
+}
+
+// 非成员访客浏览配图：客户端无云存储读权限，由服务端以管理员身份换取临时链接
+// 仅限账本成员本人，或携带账本成员(shareOpenId)授权的只读链接
+async function getImageUrls(openId, event) {
+  var nb = await getNotebookDoc(event.notebookId)
+  if (!nb) return { success: false, error: '账本不存在' }
+  var shareOpenId = typeof event.shareOpenId === 'string' ? event.shareOpenId : ''
+  if (!isMember(nb, openId) && !(shareOpenId && isMember(nb, shareOpenId))) {
+    return { success: false, error: '无权访问' }
+  }
+  var fileList = Array.isArray(event.fileList)
+    ? event.fileList.filter(function (f) {
+      return typeof f === 'string' && f.indexOf('cloud://') === 0
+    }).slice(0, 20)
+    : []
+  if (fileList.length === 0) return { success: true, urls: [] }
+  try {
+    var res = await cloud.getTempFileURL({ fileList: fileList })
+    return { success: true, urls: res.fileList || [] }
+  } catch (e) {
+    console.error('[teamRecords] 换取图片临时链接失败:', e)
+    return { success: false, error: '图片加载失败' }
   }
 }
 

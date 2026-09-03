@@ -32,6 +32,10 @@ Page({
     imagePreviewId: '',
     imagePreviewUrl: '',
 
+    // 右上角「更多」菜单（分享 / 选择成员 / 按范围删除）与成员筛选弹层
+    moreMenuVisible: false,
+    memberSelectVisible: false,
+
     // 分页加载状态
     page: 1,
     pageSize: 20,
@@ -44,7 +48,16 @@ Page({
     memberOptions: [], // 成员下拉项 { openId, nickName }
     memberFilterOpenId: '',
     memberFilterIndex: 0, // picker 选中索引（0 = 全部成员）
-    memberFilterLabel: '全部成员'
+    memberFilterLabel: '全部成员',
+
+    // 分享只读浏览：从分享卡片进入他人账本时使用
+    sharedView: false,       // 是否由分享链接进入
+    shareNotebookId: '',     // 目标账本
+    shareOwnerId: '',        // 分享者（账本成员，服务端授权凭证）
+    viewerIsMember: true,    // 当前用户是否为账本成员（false 时只读）
+    notebookName: '',
+    notebookOwnerName: '',
+    notebookOwnerAvatar: ''
   },
 
   categoryIcons: {
@@ -71,10 +84,37 @@ Page({
   },
 
   onLoad: function (options) {
+    options = options || {}
+    var shareNotebookId = options.nid || ''
+    var shareOwnerId = options.owner || ''
+
+    if (shareNotebookId) {
+      // 从分享卡片进入：直接浏览该账本（成员正常读写，非成员只读、免登录可看）
+      var ft = options.ft || ''
+      var fv = options.fv || ''
+      try { fv = decodeURIComponent(fv) } catch (e) {}
+      var title = shareOwnerId ? '正在加载分享账本...' : '记录'
+      this.setData({
+        sharedView: true,
+        shareNotebookId: shareNotebookId,
+        shareOwnerId: shareOwnerId,
+        filterType: ft || '',
+        filterValue: fv || '',
+        memberFilterOpenId: '',
+        memberFilterLabel: '全部成员',
+        title: title,
+        loading: true
+      })
+      wx.setNavigationBarTitle({ title: '分享账本' })
+      // 分享只读视图固定展示「全部成员」范围；成员选项需成员接口，访客不加载
+      this.loadRecords(ft || '', fv || '')
+      return
+    }
+
     var data = app.tagFilterData || {}
     var type = data.filterType || ''
     var value = data.filterValue || ''
-    var title = type === 'date' ? value : (value ? '定位 · ' + value : '记录')
+    var title = this.formatRangeLabel(type, value)
 
     // 若从首页带着「成员筛选」进入（点查看全部/某条记录/某天日历），继承该选择
     this.setData({
@@ -94,9 +134,21 @@ Page({
     this.loadMemberOptions()
   },
 
+  // date 支持某天（YYYY-MM-DD）与整月（YYYY-MM）两种范围，标题友好显示
+  formatRangeLabel: function (type, value) {
+    if (type === 'date' && value) {
+      return value.length === 7 ? value.replace('-', '年') + '月' : value
+    }
+    if (type === 'location' && value) {
+      return '定位 · ' + value
+    }
+    return '全部记录'
+  },
+
   // 加载当前账本成员，构建筛选下拉；成员不在账本中时回落为「全部成员」
   loadMemberOptions: function () {
     var that = this
+    if (this.data.sharedView) return // 分享只读视图不加载成员下拉
     var notebookId = app.getCurrentNotebookId()
     if (!notebookId) return
     wx.cloud.callFunction({
@@ -167,13 +219,18 @@ Page({
 
   loadRecords: function (type, value) {
     var that = this
+    // 分享卡片进入的访客可免登录浏览；普通入口仍要求登录
     var userInfo = app.getUserInfo()
-    if (!userInfo || !userInfo.openId) {
+    if (!this.data.sharedView && (!userInfo || !userInfo.openId)) {
       wx.showToast({ title: '请先登录', icon: 'none' })
       return
     }
 
-    var notebookId = app.getCurrentNotebookId()
+    var notebookId = this.data.shareNotebookId || app.getCurrentNotebookId()
+    if (!notebookId) {
+      wx.showToast({ title: '请先选择账本', icon: 'none' })
+      return
+    }
     that.setData({ loading: true, records: [], page: 1, hasMore: false, loadingMore: false })
     wx.cloud.callFunction({
       name: 'teamRecords',
@@ -184,7 +241,8 @@ Page({
         pageSize: that.data.pageSize,
         date: type === 'date' ? value : '',
         location: type === 'location' ? value : '',
-        memberOpenId: that.data.memberFilterOpenId
+        memberOpenId: that.data.memberFilterOpenId,
+        shareOpenId: that.data.shareOwnerId
       },
       success: function (cfRes) {
         var result = cfRes.result
@@ -202,6 +260,30 @@ Page({
           var stats = result.stats || {}
           var incomeAmount = stats.incomeAmount || 0
           var expenseAmount = stats.expenseAmount || 0
+          var info = result.notebookInfo || {}
+          // 首载返回后确认查看者身份与账本概要：非成员为只读访客视图
+          var viewerIsMember = result.viewerIsMember !== false
+          var navTitle = that.data.title
+          if (that.data.sharedView) {
+            var rangeLabel = that.formatRangeLabel(that.data.filterType, that.data.filterValue)
+            that.setData({
+              viewerIsMember: viewerIsMember,
+              notebookName: info.name || '',
+              notebookOwnerName: info.ownerNickName || '',
+              notebookOwnerAvatar: info.ownerAvatarUrl || ''
+            })
+            if (viewerIsMember) {
+              navTitle = rangeLabel
+            } else if (info.ownerNickName) {
+              navTitle = info.ownerNickName + ' 的账本'
+            }
+            if (!viewerIsMember) {
+              // 访客模式：无写入能力，也无需加载成员下拉
+              that.setData({ notebookIsTeam: false })
+            }
+            that.setData({ title: navTitle })
+            wx.setNavigationBarTitle({ title: navTitle })
+          }
           that.setData({
             records: records,
             loading: false,
@@ -235,12 +317,13 @@ Page({
       name: 'teamRecords',
       data: {
         action: 'getRecords',
-        notebookId: app.getCurrentNotebookId(),
+        notebookId: this.data.shareNotebookId || app.getCurrentNotebookId(),
         page: nextPage,
         pageSize: that.data.pageSize,
         date: that.data.filterType === 'date' ? that.data.filterValue : '',
         location: that.data.filterType === 'location' ? that.data.filterValue : '',
-        memberOpenId: that.data.memberFilterOpenId
+        memberOpenId: that.data.memberFilterOpenId,
+        shareOpenId: that.data.shareOwnerId
       },
       success: function (cfRes) {
         var result = cfRes.result
@@ -273,30 +356,61 @@ Page({
   },
 
   resolveRecordImages: function (records, callback) {
-    var pending = 0
+    var that = this
+    var fileIDs = []
     for (var i = 0; i < records.length; i++) {
-      if (!records[i].imageFileID) continue
-      pending++
-      wx.cloud.getTempFileURL({
-        fileList: [records[i].imageFileID],
-        success: function (res) {
-          if (res.fileList && res.fileList[0]) {
-            for (var j = 0; j < records.length; j++) {
-              if (records[j].imageFileID === res.fileList[0].fileID) {
-                records[j].imageUrl = res.fileList[0].tempFileURL
-              }
+      if (records[i].imageFileID && fileIDs.indexOf(records[i].imageFileID) === -1) {
+        fileIDs.push(records[i].imageFileID)
+      }
+    }
+    if (fileIDs.length === 0) {
+      callback()
+      return
+    }
+    var apply = function (mapping) {
+      for (var j = 0; j < records.length; j++) {
+        if (records[j].imageFileID && mapping[records[j].imageFileID]) {
+          records[j].imageUrl = mapping[records[j].imageFileID]
+        }
+      }
+      callback()
+    }
+    // 非成员访客在云存储上无读权限，改由服务端换取临时链接
+    if (this.data.sharedView && !this.data.viewerIsMember) {
+      wx.cloud.callFunction({
+        name: 'teamRecords',
+        data: {
+          action: 'getImageUrls',
+          notebookId: that.data.shareNotebookId,
+          shareOpenId: that.data.shareOwnerId,
+          fileList: fileIDs
+        },
+        success: function (cfRes) {
+          var result = cfRes.result
+          var mapping = {}
+          if (result && result.success && result.urls) {
+            for (var i = 0; i < result.urls.length; i++) {
+              mapping[result.urls[i].fileID] = result.urls[i].tempFileURL
             }
           }
-          pending--
-          if (pending === 0) callback()
+          apply(mapping)
         },
-        fail: function () {
-          pending--
-          if (pending === 0) callback()
-        }
+        fail: function () { apply({}) }
       })
+      return
     }
-    if (pending === 0) callback()
+    wx.cloud.getTempFileURL({
+      fileList: fileIDs,
+      success: function (res) {
+        var mapping = {}
+        var list = res.fileList || []
+        for (var i = 0; i < list.length; i++) {
+          mapping[list[i].fileID] = list[i].tempFileURL
+        }
+        apply(mapping)
+      },
+      fail: function () { apply({}) }
+    })
   },
 
   onAddImage: function (e) {
@@ -368,7 +482,12 @@ Page({
     var id = e.currentTarget.dataset.id
     var url = e.currentTarget.dataset.url
     if (!has) {
+      if (this.data.viewerIsMember === false) return // 只读访客不能上传配图
       this.onAddImage({ currentTarget: { dataset: { id: id } } })
+      return
+    }
+    if (!url) {
+      wx.showToast({ title: '图片加载中或已失效', icon: 'none' })
       return
     }
     this.setData({ imagePreviewVisible: true, imagePreviewId: id, imagePreviewUrl: url })
@@ -625,18 +744,39 @@ Page({
     })
   },
 
-  // 当天记录菜单（三个点）：先弹菜单再确认，藏深一点防误删
-  onDayMenuTap: function () {
-    var that = this
+  // ========== 右上角「更多」菜单 ==========
+
+  // 打开菜单：分享 / 选择成员（组队）/ 删除当天·当月（按日期进入，防误删全部）
+  onMoreMenuTap: function () {
+    this.setData({ moreMenuVisible: true })
+  },
+
+  closeMoreMenu: function () {
+    this.setData({ moreMenuVisible: false })
+  },
+
+  // 「选择成员」仅组队账本菜单里有：进入成员筛选弹层
+  onOpenMemberSelect: function () {
+    this.setData({ moreMenuVisible: false, memberSelectVisible: true })
+  },
+
+  closeMemberSelect: function () {
+    this.setData({ memberSelectVisible: false })
+  },
+
+  // 成员筛选弹层点选：下标与 memberOptions 对齐（0 = 全部成员）
+  onMemberSelectTap: function (e) {
+    var index = Number(e.currentTarget.dataset.index) || 0
+    this.setData({ memberSelectVisible: false })
+    this.onMemberFilterChange({ detail: { value: index } })
+  },
+
+  // 菜单里删除当天/当月：仍走原有确认流程，仅按日期进入时出现
+  onMoreDeleteTap: function () {
+    this.setData({ moreMenuVisible: false })
     if (this.data.filterType !== 'date') return
-    wx.showActionSheet({
-      itemList: ['删除当天记录'],
-      itemColor: '#e64340',
-      success: function (res) {
-        if (res.tapIndex === 0) that.onDeleteDay()
-      },
-      fail: function () {}
-    })
+    if (this.data.filterValue.length === 7) this.onDeleteMonthView() // YYYY-MM 整月视图
+    else this.onDeleteDay()
   },
 
   // 删除当天自己创建的全部记录（需确认）
@@ -692,6 +832,59 @@ Page({
     })
   },
 
+  // 删除当月自己创建的全部记录（需确认；从整月明细进入，走 deleteByMonth）
+  onDeleteMonthView: function () {
+    var that = this
+    if (this.data.filterType !== 'date') return
+    var month = this.data.filterValue
+    var myOpenId = (app.getUserInfo() || {}).openId
+    var allCount = this.data.records.length
+    var myCount = 0
+    for (var i = 0; i < this.data.records.length; i++) {
+      if (this.data.records[i].openId === myOpenId) myCount++
+    }
+    if (myCount === 0) {
+      wx.showToast({ title: '当月没有你的记录', icon: 'none' })
+      return
+    }
+
+    wx.showModal({
+      title: '删除当月记录',
+      content: '确定删除 ' + month.replace('-', '年') + '月 你创建的 ' + myCount + ' 条记录？当月共 ' + allCount + ' 条，此操作不可恢复！',
+      confirmText: '删除',
+      confirmColor: '#e64340',
+      success: function (res) {
+        if (!res.confirm) return
+        wx.cloud.callFunction({
+          name: 'teamRecords',
+          data: { action: 'deleteByMonth', notebookId: app.getCurrentNotebookId(), month: month },
+          success: function (cfRes) {
+            var result = cfRes.result
+            if (!result || !result.success) {
+              wx.showToast({ title: result ? result.error : '删除失败', icon: 'none' })
+              return
+            }
+            // 清理配图（走 deleteFiles 云函数，管理员权限）
+            if (result.imageFileIDs && result.imageFileIDs.length > 0) {
+              wx.cloud.callFunction({
+                name: 'deleteFiles',
+                data: { fileList: result.imageFileIDs },
+                fail: function () {}
+              })
+            }
+            wx.showToast({ title: '已删除 ' + result.removed + ' 条', icon: 'none' })
+            // 删除整月后统计需要重算，重新加载首屏
+            that.loadRecords(that.data.filterType, that.data.filterValue)
+          },
+          fail: function (err) {
+            console.error('[记录] 删除当月记录失败:', err)
+            wx.showToast({ title: '删除失败', icon: 'none' })
+          }
+        })
+      }
+    })
+  },
+
   recalcStats: function (records) {
     var totalIncome = 0
     var totalExpense = 0
@@ -718,13 +911,52 @@ Page({
 
   // ========== 分享 ==========
 
+  // 构造分享落地链接：账本 nid + 分享者 owner（服务端授权凭证）+ 可选日期范围
+  buildShareQuery: function () {
+    var notebookId = this.data.shareNotebookId || app.getCurrentNotebookId() || ''
+    var userInfo = app.getUserInfo() || {}
+    var ownerId = this.data.shareOwnerId || userInfo.openId || ''
+    var q = 'nid=' + notebookId
+    if (ownerId) q += '&owner=' + ownerId
+    // 带上当前查看范围（整月 YYYY-MM / 某天 YYYY-MM-DD / 定位），所见即所得
+    if (this.data.filterType && this.data.filterValue) {
+      q += '&ft=' + this.data.filterType + '&fv=' + encodeURIComponent(this.data.filterValue)
+    }
+    return q
+  },
+
+  buildShareTitle: function () {
+    var rangeLabel = this.formatRangeLabel(this.data.filterType, this.data.filterValue)
+    var title = ''
+    if (this.data.sharedView && !this.data.viewerIsMember) {
+      // 访客转发分享卡片：仍以原账本成员(owner)授权，标题点明账本归属
+      var owner = this.data.notebookOwnerName || '账本主人'
+      var nbName = this.data.notebookName
+      title = owner + ' 的' + (nbName ? '「' + nbName + '」账本' : '账本')
+      if (rangeLabel && rangeLabel !== '全部记录') title += ' · ' + rangeLabel
+    } else {
+      var name = this.data.sharedView ? this.data.notebookName : (app.getCurrentNotebookName() || '')
+      title = (name || '智能语音记账') + ' 记账明细'
+      if (rangeLabel && rangeLabel !== '全部记录') title = (name || '智能语音记账') + ' · ' + rangeLabel
+    }
+    return title.length > 30 ? title.slice(0, 30) : title
+  },
+
   onShareAppMessage: function () {
-    var title = this.data.title || '智能语音记账 · 记账明细'
-    return { title: title, path: '/pages/records/records' }
+    // 从「更多」菜单里点分享后收起弹层
+    if (this.data.moreMenuVisible || this.data.memberSelectVisible) {
+      this.setData({ moreMenuVisible: false, memberSelectVisible: false })
+    }
+    return {
+      title: this.buildShareTitle(),
+      path: '/pages/records/records?' + this.buildShareQuery()
+    }
   },
 
   onShareTimeline: function () {
-    var title = this.data.title || '智能语音记账 · 记账明细'
-    return { title: title }
+    return {
+      title: this.buildShareTitle(),
+      query: this.buildShareQuery()
+    }
   }
 })

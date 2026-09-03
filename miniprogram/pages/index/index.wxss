@@ -453,6 +453,22 @@ page {
   color: #475569;
   font-size: 30rpx;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  padding: 6rpx 12rpx;
+  margin-left: -12rpx;
+  border-radius: 10rpx;
+}
+
+/* 月份下钻箭头：提示可点击查看整月明细 */
+.calendar-month-arrow {
+  margin-left: 6rpx;
+  font-size: 30rpx;
+  color: #94a3b8;
+}
+
+.calendar-month:active {
+  background: rgba(124, 58, 237, 0.1);
 }
 
 /* 日历月份菜单按钮：三个点，低调隐藏删除入口 */

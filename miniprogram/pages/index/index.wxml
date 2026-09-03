@@ -129,7 +129,16 @@
 
     <!-- ====== 记账列表 ======-->
     <view class="section list-section" wx:if="{{records.length > 0}}">
-      <view class="section-title">记账记录</view>
+      <view class="list-title-row">
+        <view class="section-title">记账记录</view>
+        <!-- 组队模式：按成员筛选（默认全部成员） -->
+        <picker wx:if="{{currentNotebookIsTeam && memberOptions.length > 0}}" mode="selector" range="{{memberOptions}}" range-key="nickName" value="{{memberFilterIndex}}" bindchange="onMemberFilterChange">
+          <view class="member-filter-btn">
+            <text class="member-filter-label">{{memberFilterLabel}}</text>
+            <text class="member-filter-arrow">▾</text>
+          </view>
+        </picker>
+      </view>
 
       <!-- Tab 切换 -->
       <view class="tab-bar">

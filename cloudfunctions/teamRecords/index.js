@@ -21,6 +21,7 @@ exports.main = async (event, context) => {
   var action = event.action
 
   if (action === 'getRecords') return getRecords(OPENID, event)
+  if (action === 'getRecordsVersion') return getRecordsVersion(OPENID, event)
   if (action === 'addRecord') return addRecord(OPENID, event)
   if (action === 'updateRecord') return updateRecord(OPENID, event)
   if (action === 'deleteRecord') return deleteRecord(OPENID, event)
@@ -41,6 +42,10 @@ async function getRecords(openId, event) {
     condition.time = _.gte(event.date + ' 00:00').and(_.lte(event.date + ' 23:59'))
   } else if (event.location) {
     condition.location = event.location
+  }
+  // 按成员筛选：只看指定成员创建的记录（不传/空串=全部成员），分页与统计共用该条件
+  if (event.memberOpenId) {
+    condition.openId = event.memberOpenId
   }
 
   // 显式传 page/pageSize 才分页；否则保持原行为一次拉全部（index/discover 依赖）
@@ -91,12 +96,43 @@ async function getRecords(openId, event) {
 
   return {
     success: true,
+    recordsVersion: Number(nb.recordsVersion) || 0,
     records: res.data,
     total: total,
     page: page,
     pageSize: pageSize,
     hasMore: isPaged ? page * pageSize < total : false,
     stats: stats
+  }
+}
+
+// 轻量版本查询：供前端轮询判断账本记录是否有变化，只返回版本号不拉数据
+async function getRecordsVersion(openId, event) {
+  var nb = await getNotebookDoc(event.notebookId)
+  if (!nb) return { success: false, error: '账本不存在' }
+  if (!isMember(nb, openId)) return { success: false, error: '无权访问' }
+  return { success: true, recordsVersion: Number(nb.recordsVersion) || 0 }
+}
+
+// 账本记录发生增/删/改后递增版本号，作为成员间同步的变更信号
+async function bumpRecordsVersion(notebookId) {
+  if (!notebookId) return
+  try {
+    await db.collection('notebooks').doc(notebookId).update({
+      data: { recordsVersion: _.inc(1) }
+    })
+  } catch (e) {
+    // 老账本文档可能还没有该字段，inc 失败时改为读取后直接赋值
+    try {
+      var docRes = await db.collection('notebooks').doc(notebookId).get()
+      if (docRes.data) {
+        await db.collection('notebooks').doc(notebookId).update({
+          data: { recordsVersion: (Number(docRes.data.recordsVersion) || 0) + 1 }
+        })
+      }
+    } catch (e2) {
+      console.error('[版本] 账本记录版本递增失败:', e2)
+    }
   }
 }
 
@@ -136,6 +172,7 @@ async function addRecord(openId, event) {
 
   var res = await db.collection('records').add({ data: data })
   data._id = res._id
+  await bumpRecordsVersion(event.notebookId)
   return { success: true, record: data }
 }
 
@@ -145,6 +182,7 @@ async function updateRecord(openId, event) {
   if (rec.openId !== openId) return { success: false, error: '只能修改自己的记录' }
 
   await db.collection('records').doc(event.recordId).update({ data: event.update })
+  await bumpRecordsVersion(rec.notebookId)
   return { success: true }
 }
 
@@ -182,6 +220,7 @@ async function deleteByDate(openId, event) {
   }
 
   var delRes = await db.collection('records').where(condition).remove()
+  await bumpRecordsVersion(event.notebookId)
   return { success: true, removed: delRes.stats.removed, imageFileIDs: imageFileIDs }
 }
 
@@ -215,6 +254,7 @@ async function deleteByMonth(openId, event) {
   }
 
   var delRes = await db.collection('records').where(condition).remove()
+  await bumpRecordsVersion(event.notebookId)
   return { success: true, removed: delRes.stats.removed, imageFileIDs: imageFileIDs }
 }
 
@@ -226,6 +266,7 @@ async function updateImage(openId, event) {
   await db.collection('records').doc(event.recordId).update({
     data: { imageFileID: event.imageFileID }
   })
+  await bumpRecordsVersion(rec.notebookId)
   return { success: true }
 }
 

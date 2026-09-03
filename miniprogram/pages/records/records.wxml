@@ -27,7 +27,16 @@
           <text class="list-title">记账记录</text>
           <text class="list-count">共 {{recordCount}} 条 · 支出 {{expenseCount}} · 收入 {{incomeCount}}</text>
         </view>
-        <view class="day-menu-btn" wx:if="{{filterType === 'date'}}" catchtap="onDayMenuTap">⋮</view>
+        <view class="list-header-right">
+          <!-- 组队模式：按成员筛选（默认全部成员） -->
+          <picker wx:if="{{notebookIsTeam && memberOptions.length > 0}}" mode="selector" range="{{memberOptions}}" range-key="nickName" value="{{memberFilterIndex}}" bindchange="onMemberFilterChange">
+            <view class="member-filter-btn">
+              <text class="member-filter-label">{{memberFilterLabel}}</text>
+              <text class="member-filter-arrow">▾</text>
+            </view>
+          </picker>
+          <view class="day-menu-btn" wx:if="{{filterType === 'date'}}" catchtap="onDayMenuTap">⋮</view>
+        </view>
       </view>
       <view class="record-list">
         <view class="record-item" wx:for="{{records}}" wx:key="id">

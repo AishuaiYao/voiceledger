@@ -37,7 +37,14 @@ Page({
     pageSize: 20,
     total: 0,
     hasMore: false,
-    loadingMore: false
+    loadingMore: false,
+
+    // 组队模式：按成员筛选（默认全部成员）
+    notebookIsTeam: false,
+    memberOptions: [], // 成员下拉项 { openId, nickName }
+    memberFilterOpenId: '',
+    memberFilterIndex: 0, // picker 选中索引（0 = 全部成员）
+    memberFilterLabel: '全部成员'
   },
 
   categoryIcons: {
@@ -69,16 +76,93 @@ Page({
     var value = data.filterValue || ''
     var title = type === 'date' ? value : (value ? '定位 · ' + value : '记录')
 
+    // 若从首页带着「成员筛选」进入（点查看全部/某条记录/某天日历），继承该选择
     this.setData({
       filterType: type,
       filterValue: value,
-      title: title
+      title: title,
+      memberFilterOpenId: data.memberOpenId || '',
+      memberFilterLabel: data.memberLabel || '全部成员'
     })
 
     wx.setNavigationBarTitle({ title: title })
     this.loadRecords(type, value)
 
     app.tagFilterData = null
+
+    // 加载账本成员用于筛选下拉（异步返回，期间默认显示全部成员）
+    this.loadMemberOptions()
+  },
+
+  // 加载当前账本成员，构建筛选下拉；成员不在账本中时回落为「全部成员」
+  loadMemberOptions: function () {
+    var that = this
+    var notebookId = app.getCurrentNotebookId()
+    if (!notebookId) return
+    wx.cloud.callFunction({
+      name: 'team',
+      data: { action: 'getNotebookDetail', notebookId: notebookId },
+      success: function (cfRes) {
+        var result = cfRes.result
+        if (!result || !result.success) return
+        var nb = result.notebook || {}
+        var members = nb.members || []
+        // 下拉首项固定为「全部成员」，picker value 即 options 下标
+        var options = [{ openId: '', nickName: '全部成员' }]
+        for (var i = 0; i < members.length; i++) {
+          options.push({
+            openId: members[i].openId,
+            nickName: members[i].nickName || '微信用户'
+          })
+        }
+
+        var isTeam = !!nb.isTeam
+        var targetOpenId = that.data.memberFilterOpenId
+        var index = 0
+        if (isTeam && targetOpenId) {
+          var found = false
+          for (var k = 1; k < options.length; k++) {
+            if (options[k].openId === targetOpenId) {
+              index = k
+              found = true
+              break
+            }
+          }
+          if (!found) targetOpenId = '' // 传入的成员已不在账本
+        }
+        if (!isTeam) targetOpenId = ''
+        var label = options[index] ? options[index].nickName : '全部成员'
+
+        var needReload = targetOpenId !== that.data.memberFilterOpenId
+        that.setData({
+          notebookIsTeam: isTeam,
+          memberOptions: options,
+          memberFilterOpenId: targetOpenId,
+          memberFilterIndex: index,
+          memberFilterLabel: label
+        })
+        // 首页带入的成员选择已失效：按「全部成员」重新拉取第一页
+        if (needReload) {
+          that.loadRecords(that.data.filterType, that.data.filterValue)
+        }
+      },
+      fail: function () {}
+    })
+  },
+
+  // 成员下拉切换：重置分页并按所选成员重新加载（默认第一项=全部成员）
+  onMemberFilterChange: function (e) {
+    var index = Number(e.detail.value) || 0
+    var options = this.data.memberOptions
+    var opt = options[index]
+    var openId = opt ? opt.openId : ''
+    var label = opt ? opt.nickName : '全部成员'
+    this.setData({
+      memberFilterOpenId: openId,
+      memberFilterIndex: index,
+      memberFilterLabel: label
+    })
+    this.loadRecords(this.data.filterType, this.data.filterValue)
   },
 
   loadRecords: function (type, value) {
@@ -99,7 +183,8 @@ Page({
         page: 1,
         pageSize: that.data.pageSize,
         date: type === 'date' ? value : '',
-        location: type === 'location' ? value : ''
+        location: type === 'location' ? value : '',
+        memberOpenId: that.data.memberFilterOpenId
       },
       success: function (cfRes) {
         var result = cfRes.result
@@ -154,7 +239,8 @@ Page({
         page: nextPage,
         pageSize: that.data.pageSize,
         date: that.data.filterType === 'date' ? that.data.filterValue : '',
-        location: that.data.filterType === 'location' ? that.data.filterValue : ''
+        location: that.data.filterType === 'location' ? that.data.filterValue : '',
+        memberOpenId: that.data.memberFilterOpenId
       },
       success: function (cfRes) {
         var result = cfRes.result

@@ -77,6 +77,12 @@ Page({
     currentNotebookMemberCount: 0,
     hasNotebook: false,
 
+    // 按成员筛选记账记录（组队模式，默认全部成员）
+    memberOptions: [], // 成员下拉项 { openId, nickName }
+    memberFilterOpenId: '',
+    memberFilterIndex: 0, // picker 选中索引（0 = 全部成员）
+    memberFilterLabel: '全部成员',
+
     // 邀请加入流程
     inviteId: '',
     inviteInfo: null,
@@ -187,6 +193,10 @@ Page({
       this.loadNotebookIcon(notebookId)
       // 首次进入该账本（冷启动/重新进入/切换账本）用缓存秒开，否则直接后台刷新
       var firstForNotebook = this._loadedNotebookId !== notebookId
+      if (firstForNotebook) {
+        this._recordsVersion = null
+        this._syncInFlight = false
+      }
       this.loadRecords(firstForNotebook)
     } else {
       // 已登录但本地没有当前账本（如登录后首次回主页/缓存被清），
@@ -202,6 +212,10 @@ Page({
             })
             that.loadNotebookIcon(id)
             var firstForNb = that._loadedNotebookId !== id
+            if (firstForNb) {
+              that._recordsVersion = null
+              that._syncInFlight = false
+            }
             that.loadRecords(firstForNb)
           }
         })
@@ -212,6 +226,11 @@ Page({
     if (options && options.inviteNotebookId && !this.data.inviteId) {
       this.handleInvite(options.inviteNotebookId)
     }
+  },
+
+  onHide: function () {
+    // 离开首页时停止轮询，避免在页面不可见期间做无效请求
+    this.stopTeamSync()
   },
 
   // ========== 邀请加入流程 ==========
@@ -318,6 +337,8 @@ Page({
         var result = cfRes.result
         if (!result || !result.success) {
           that.setData({ currentNotebookIcon: '', currentNotebookIsTeam: false })
+          that.resetMemberFilter()
+          that.startTeamSync()
           return
         }
         var nb = result.notebook
@@ -327,11 +348,99 @@ Page({
           currentNotebookMemberCount: nb.memberCount || 1
         })
         that.writeHomeCache()
+        // 同步账本成员到筛选下拉（成员增减/昵称更新后自动跟随）
+        that.refreshMemberOptions(nb)
+        // 拿到账本类型后才决定是否启动团队同步轮询
+        if (that.data.currentNotebookId === notebookId) that.startTeamSync()
       },
       fail: function () {
         that.setData({ currentNotebookIcon: '', currentNotebookIsTeam: false })
+        that.resetMemberFilter()
+        that.startTeamSync()
       }
     })
+  },
+
+  // ========== 按成员筛选记账记录 ==========
+
+  // 用账本成员信息构建筛选下拉；账本类型/成员列表变化时保留仍有效的选择，否则重置为「全部成员」
+  // 下拉首项固定为「全部成员」（picker value 即 options 下标）
+  refreshMemberOptions: function (nb) {
+    var isTeam = !!(nb && nb.isTeam)
+    var members = (nb && nb.members) || []
+    var options = [{ openId: '', nickName: '全部成员' }]
+    for (var i = 0; i < members.length; i++) {
+      options.push({
+        openId: members[i].openId,
+        nickName: members[i].nickName || '微信用户'
+      })
+    }
+    if (!isTeam) options = []
+
+    var keepOpenId = this.data.memberFilterOpenId
+    var keepIndex = 0
+    if (isTeam && keepOpenId) {
+      var found = false
+      for (var k = 1; k < options.length; k++) {
+        if (options[k].openId === keepOpenId) {
+          keepIndex = k
+          found = true
+          break
+        }
+      }
+      if (!found) keepOpenId = ''
+    }
+    if (!isTeam) keepOpenId = ''
+
+    var changed = keepOpenId !== this.data.memberFilterOpenId
+    var label = options[keepIndex] ? options[keepIndex].nickName : '全部成员'
+    this.setData({
+      memberOptions: options,
+      memberFilterOpenId: keepOpenId,
+      memberFilterIndex: keepIndex,
+      memberFilterLabel: label
+    })
+    // 选择被重置（切个人账本/成员被移除等）且当前展示的正是本账本数据时，立即按新范围重算
+    if (changed && this._loadedNotebookId === this.data.currentNotebookId) {
+      this.filterRecords()
+      this.updateStats(this.data.records)
+    }
+  },
+
+  resetMemberFilter: function () {
+    if (!this.data.memberFilterOpenId && this.data.memberOptions.length === 0) return
+    this.setData({ memberOptions: [], memberFilterOpenId: '', memberFilterIndex: 0, memberFilterLabel: '全部成员' })
+    if (this._loadedNotebookId === this.data.currentNotebookId) {
+      this.filterRecords()
+      this.updateStats(this.data.records)
+    }
+  },
+
+  // 展示层统一的成员收窄：个人账本或未选中成员时原样返回
+  memberScopedRecords: function (records) {
+    var openId = this.data.memberFilterOpenId
+    if (!openId || !this.data.currentNotebookIsTeam) return records
+    var out = []
+    for (var i = 0; i < records.length; i++) {
+      if (records[i].openId === openId) out.push(records[i])
+    }
+    return out
+  },
+
+  // 记账记录区块右侧成员下拉切换
+  onMemberFilterChange: function (e) {
+    var index = Number(e.detail.value) || 0
+    var options = this.data.memberOptions
+    var opt = options[index]
+    var openId = opt ? opt.openId : ''
+    var label = opt ? opt.nickName : '全部成员'
+    this.setData({
+      memberFilterOpenId: openId,
+      memberFilterIndex: index,
+      memberFilterLabel: label
+    })
+    this.filterRecords()
+    this.updateStats(this.data.records)
   },
 
   // ========== 团队成员弹窗 ==========
@@ -929,11 +1038,12 @@ Page({
   },
 
   // useCache: true 时先用本地缓存秒开，再后台云函数刷新；false 时直接后台刷新
-  loadRecords: function (useCache) {
+  loadRecords: function (useCache, done) {
     var that = this
     var notebookId = this.data.currentNotebookId
     var userInfo = app.getUserInfo()
-    if (!userInfo || !userInfo.openId || !notebookId) return
+    if (typeof done !== 'function') done = function () {}
+    if (!userInfo || !userInfo.openId || !notebookId) { done(); return }
 
     // 秒开：先渲染本地缓存
     if (useCache) {
@@ -947,6 +1057,7 @@ Page({
         var result = cfRes.result
         if (!result || !result.success) {
           console.error('[记录] 查询失败:', result ? result.error : 'no result')
+          done()
           return
         }
         var records = result.records || []
@@ -956,15 +1067,72 @@ Page({
         }
         that.resolveRecordImages(records, function () {
           that._loadedNotebookId = notebookId
+          that._recordsVersion = Number(result.recordsVersion) || 0
           that.setData({ records: records })
           that.updateStats(records)
           that.filterRecords()
           that.writeHomeCache()
+          done()
         })
       },
       fail: function (err) {
         console.error('[记录] 查询失败:', err)
+        done()
       }
+    })
+  },
+
+  // ========== 团队账本实时同步（轻量轮询） ==========
+
+  // 页面停留期间每 5 秒查询账本记录版本号，检测到其他成员增删改后静默全量刷新
+  startTeamSync: function () {
+    var that = this
+    var notebookId = this.data.currentNotebookId
+    if (!notebookId) return
+    // 仍是同一个账本且定时器在跑，直接复用
+    if (this._syncNotebookId === notebookId && this.syncTimer) return
+    this.stopTeamSync()
+    this._syncNotebookId = notebookId
+    this.syncTimer = setInterval(function () {
+      that.pollTeamSync()
+    }, 5000)
+  },
+
+  stopTeamSync: function () {
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer)
+      this.syncTimer = null
+    }
+    this._syncNotebookId = null
+  },
+
+  // 单次同步探测：版本号变化才触发全量刷新，避免无意义的重复渲染
+  pollTeamSync: function () {
+    var that = this
+    var notebookId = this.data.currentNotebookId
+    var userInfo = app.getUserInfo()
+    if (!userInfo || !userInfo.openId || !notebookId) return
+    wx.cloud.callFunction({
+      name: 'teamRecords',
+      data: { action: 'getRecordsVersion', notebookId: notebookId },
+      success: function (cfRes) {
+        var result = cfRes.result
+        if (!result || !result.success) return
+        var ver = Number(result.recordsVersion) || 0
+        // onShow 的全量加载尚未完成：先记录版本，避免与其重复刷新
+        if (that._recordsVersion == null) {
+          that._recordsVersion = ver
+          return
+        }
+        if (ver === that._recordsVersion) return
+        // 检测到账本数据变化：静默全量刷新（loadRecords 成功后同步 _recordsVersion）
+        if (that._syncInFlight) return
+        that._syncInFlight = true
+        that.loadRecords(false, function () {
+          that._syncInFlight = false
+        })
+      },
+      fail: function () {}
     })
   },
 
@@ -973,7 +1141,8 @@ Page({
   },
 
   updateStats: function (records) {
-    // 收支概览：按整个账本（所有成员、所有时间）全量统计，与 dateRange 展示范围一致
+    // 先按选中的成员收窄（未选中=全部成员），再按所选范围内全量统计
+    records = this.memberScopedRecords(records)
     var totalIncome = 0
     var totalExpense = 0
     for (var i = 0; i < records.length; i++) {
@@ -1089,6 +1258,7 @@ Page({
   },
 
   updateCalendar: function (records) {
+    records = this.memberScopedRecords(records)
     var month = this.data.analysisMonth || this.data.calendarMonth
 
     // 选择具体月份：展示该月每日热力图
@@ -1327,7 +1497,7 @@ Page({
 
   filterRecords: function () {
     var tab = this.data.activeTab
-    var records = this.data.records
+    var records = this.memberScopedRecords(this.data.records)
     var filtered = records
 
     if (tab === 'expense') {
@@ -1361,8 +1531,18 @@ Page({
   },
 
   goToAllRecords: function () {
-    app.tagFilterData = { filterType: '', filterValue: '' }
+    app.tagFilterData = this.buildTagFilterData('', '')
     wx.navigateTo({ url: '/pages/records/records' })
+  },
+
+  // 跳转明细页时把当前「成员筛选」一并带过去，保证列表衔接一致
+  buildTagFilterData: function (type, value) {
+    return {
+      filterType: type || '',
+      filterValue: value || '',
+      memberOpenId: this.data.memberFilterOpenId || '',
+      memberLabel: this.data.memberFilterLabel || '全部成员'
+    }
   },
 
   resolveRecordImages: function (records, callback) {
@@ -1778,10 +1958,10 @@ Page({
     var value = e.currentTarget.dataset.value
 
     // 用全局变量传参，避免 URL 编码问题
-    app.tagFilterData = {
-      filterType: type === 'time' ? 'date' : 'location',
-      filterValue: type === 'time' ? value.substring(0, 10) : value
-    }
+    app.tagFilterData = this.buildTagFilterData(
+      type === 'time' ? 'date' : 'location',
+      type === 'time' ? value.substring(0, 10) : value
+    )
 
     wx.navigateTo({ url: '/pages/records/records' })
   },
@@ -1798,7 +1978,7 @@ Page({
     if (!month) return
     var day = Number(ds.day)
     var date = month + '-' + (day < 10 ? '0' + day : String(day))
-    app.tagFilterData = { filterType: 'date', filterValue: date }
+    app.tagFilterData = this.buildTagFilterData('date', date)
     wx.navigateTo({ url: '/pages/records/records' })
   },
 

@@ -75,6 +75,41 @@ page {
   justify-content: center;
 }
 
+/* 列表标题行右侧：按成员筛选下拉 */
+.list-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-shrink: 0;
+}
+
+.member-filter-picker {
+  flex-shrink: 0;
+}
+
+.member-filter-btn {
+  display: flex;
+  align-items: center;
+  max-width: 240rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.member-filter-label {
+  font-size: 24rpx;
+  color: #0ea5e9;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.member-filter-arrow {
+  margin-left: 6rpx;
+  font-size: 20rpx;
+  color: #0ea5e9;
+}
+
 /* 概览 */
 .stats-cards {
   display: flex;

@@ -15,6 +15,17 @@ function formatJoinedDate(ts) {
   return y + '-' + mo + '-' + day
 }
 
+// 当前月份 YYYY-MM（综合分析默认展示本月）
+function currentMonthStr() {
+  var d = new Date()
+  return d.getFullYear() + '-' + (d.getMonth() + 1).toString().padStart(2, '0')
+}
+
+// 月份展示文案：2026-09 -> 2026年09月
+function monthLabelStr(month) {
+  return month ? month.replace('-', '年') + '月' : ''
+}
+
 // 首页数据本地缓存 key（按账本隔离），用于冷启动/重新进入时秒开
 var HOME_CACHE_PREFIX = 'homeCache_'
 function homeCacheKey(notebookId) {
@@ -48,11 +59,11 @@ Page({
     balance: 0,
     dateRange: '',
 
-    // 综合分析时间筛选
-    analysisMonth: '',
-    analysisLabel: '全部时间',
-    calendarMonth: '',
-    calendarLabel: '',
+    // 综合分析时间筛选（默认展示本月）
+    analysisMonth: currentMonthStr(),
+    analysisLabel: monthLabelStr(currentMonthStr()),
+    calendarMonth: currentMonthStr(),
+    calendarLabel: monthLabelStr(currentMonthStr()),
     calendarDays: [],
     dailyExpenseTotal: 0,
     monthlyHeat: [],
@@ -129,12 +140,14 @@ Page({
   processing: false,
 
   onLoad: function (options) {
-    // 初始化导航栏尺寸；综合分析默认展示全部时间（整个账本所有成员的消费情况）
+    // 初始化导航栏尺寸；综合分析默认展示本月（可按「全部」切换到整账本数据）
+    var curMonth = currentMonthStr()
+    var curLabel = monthLabelStr(curMonth)
     this.setData(Object.assign(app.getNavBarLayout(), {
-      analysisMonth: '',
-      analysisLabel: '全部时间',
-      calendarMonth: '',
-      calendarLabel: ''
+      analysisMonth: curMonth,
+      analysisLabel: curLabel,
+      calendarMonth: curMonth,
+      calendarLabel: curLabel
     }))
 
     this.recorderManager = wx.getRecorderManager()

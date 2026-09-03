@@ -65,14 +65,20 @@ page {
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
-  background: rgba(100, 116, 139, 0.08);
-  color: #94a3b8;
+  background: rgba(139, 92, 246, 0.08);
+  color: #64748b;
   font-size: 34rpx;
   font-weight: 700;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s;
+}
+
+.day-menu-btn:active {
+  background: rgba(139, 92, 246, 0.18);
+  color: #6d28d9;
 }
 
 /* 列表标题行右侧 */
@@ -562,27 +568,48 @@ page {
   position: fixed;
   inset: 0;
   z-index: 1200;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8rpx);
+  -webkit-backdrop-filter: blur(8rpx);
   display: flex;
   align-items: flex-end;
+  animation: moreMaskFade 0.2s ease-out;
 }
 
 .more-sheet {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
-  padding: 16rpx 24rpx calc(36rpx + env(safe-area-inset-bottom));
-  border-radius: 32rpx 32rpx 0 0;
-  background: rgba(241, 245, 249, 0.98);
-  backdrop-filter: blur(20rpx);
-  -webkit-backdrop-filter: blur(20rpx);
+  padding: 44rpx 28rpx calc(36rpx + env(safe-area-inset-bottom));
+  border-radius: 44rpx 44rpx 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(243, 240, 255, 0.96));
+  backdrop-filter: blur(30rpx);
+  -webkit-backdrop-filter: blur(30rpx);
+  box-shadow: 0 -12rpx 48rpx rgba(124, 58, 237, 0.16);
+  animation: moreSheetUp 0.28s ease-out;
+}
+
+/* 顶部拖拽小横条 */
+.more-sheet::before {
+  content: '';
+  position: absolute;
+  top: 14rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 76rpx;
+  height: 8rpx;
+  border-radius: 8rpx;
+  background: rgba(139, 92, 246, 0.28);
 }
 
 .more-sheet-title {
   display: block;
   text-align: center;
-  color: #94a3b8;
-  font-size: 24rpx;
-  padding: 8rpx 0 20rpx;
+  font-size: 26rpx;
+  color: #8b5cf6;
+  font-weight: 600;
+  letter-spacing: 3rpx;
+  padding: 0 0 28rpx;
 }
 
 .more-sheet-item {
@@ -591,15 +618,17 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 26rpx 28rpx;
-  margin-bottom: 16rpx;
-  border-radius: 20rpx;
-  background: #ffffff;
+  padding: 28rpx 32rpx;
+  margin-bottom: 18rpx;
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1rpx solid rgba(196, 181, 253, 0.28);
+  box-shadow: 0 2rpx 12rpx rgba(124, 58, 237, 0.06);
   color: #334155;
   font-size: 30rpx;
+  font-weight: 500;
   line-height: 1.4;
   text-align: left;
-  border: none;
 }
 
 /* 菜单里的分享项是 button，重置默认边框 */
@@ -608,46 +637,73 @@ page {
 }
 
 .more-sheet-item:active {
-  opacity: 0.75;
+  transform: scale(0.98);
+  opacity: 0.85;
 }
 
+/* 分享：紫调渐变主操作，点击拉起微信转发 */
+.more-sheet-share {
+  justify-content: center;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  border: none;
+  box-shadow: 0 10rpx 28rpx rgba(124, 58, 237, 0.32);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 「选择成员」行右侧的当前筛选小胶囊 */
 .more-sheet-current {
-  font-size: 26rpx;
-  color: #94a3b8;
-  max-width: 300rpx;
+  font-size: 24rpx;
+  color: #7c3aed;
+  background: rgba(221, 214, 254, 0.6);
+  padding: 4rpx 20rpx;
+  border-radius: 999rpx;
+  max-width: 260rpx;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .more-sheet-active {
-  color: #7c3aed;
+  color: #6d28d9;
   font-weight: 600;
+  background: rgba(237, 233, 254, 0.95);
+  border-color: rgba(139, 92, 246, 0.42);
+  box-shadow: 0 4rpx 16rpx rgba(124, 58, 237, 0.12);
 }
 
 .more-sheet-check {
   color: #7c3aed;
-  font-size: 28rpx;
+  font-size: 30rpx;
+  font-weight: 700;
   margin-left: 16rpx;
 }
 
+/* 删除当天/当月：警示色居中整行 */
 .more-sheet-danger {
+  justify-content: center;
   color: #e64340;
+  background: rgba(255, 245, 245, 0.95);
+  border-color: rgba(252, 165, 165, 0.35);
+  font-weight: 500;
 }
 
 .more-sheet-cancel {
   box-sizing: border-box;
   width: 100%;
   padding: 26rpx 0;
-  border-radius: 20rpx;
-  background: #ffffff;
-  color: #64748b;
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1rpx solid rgba(196, 181, 253, 0.28);
+  color: #94a3b8;
   font-size: 30rpx;
+  font-weight: 500;
   text-align: center;
+  margin-top: 6rpx;
 }
 
 .more-sheet-cancel:active {
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* 成员选择列表（组队账本筛选用） */
@@ -655,4 +711,14 @@ page {
   max-height: 44vh;
   overflow-y: auto;
   margin-bottom: 8rpx;
+}
+
+@keyframes moreMaskFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes moreSheetUp {
+  from { transform: translateY(100%); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
 }

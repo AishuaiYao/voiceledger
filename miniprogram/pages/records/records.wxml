@@ -175,7 +175,7 @@
   <view class="more-sheet-mask" wx:if="{{moreMenuVisible}}" catchtap="closeMoreMenu">
     <view class="more-sheet" catchtap="onModalStop">
       <text class="more-sheet-title">更多操作</text>
-      <button class="more-sheet-item" open-type="share">分享</button>
+      <button class="more-sheet-item more-sheet-share" open-type="share">分享</button>
       <view class="more-sheet-item" wx:if="{{notebookIsTeam && memberOptions.length > 0}}" bindtap="onOpenMemberSelect">
         <text>选择成员</text>
         <text class="more-sheet-current">{{memberFilterLabel}}</text>
